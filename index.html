@@ -1,97 +1,542 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>AI Generator Web</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Generator Suite - Text & Subtitle Generator</title>
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial;
-      background: #0f0f0f;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
       color: white;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
       text-align: center;
-      padding: 40px;
+      margin-bottom: 40px;
     }
 
-    h1 {
-      color: #00d4ff;
+    .header h1 {
+      font-size: 2.5em;
+      background: linear-gradient(135deg, #38bdf8, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
     }
 
-    input, select {
-      width: 80%;
-      padding: 10px;
-      margin: 10px;
-      border-radius: 8px;
+    .header p {
+      color: #94a3b8;
+      font-size: 1em;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #334155;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      padding: 12px 24px;
+      background: transparent;
+      color: #94a3b8;
       border: none;
+      cursor: pointer;
+      font-size: 1em;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
     }
 
-    button {
-      padding: 10px 20px;
-      background: #00d4ff;
+    .tab-btn:hover {
+      color: #38bdf8;
+    }
+
+    .tab-btn.active {
+      color: #38bdf8;
+      border-bottom-color: #38bdf8;
+    }
+
+    /* Tab Content */
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* Cards */
+    .card {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      border: 1px solid #475569;
+      border-radius: 12px;
+      padding: 30px;
+      backdrop-filter: blur(10px);
+    }
+
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #cbd5e1;
+      font-weight: 600;
+    }
+
+    input[type="text"],
+    input[type="file"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 12px;
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      color: white;
+      font-size: 1em;
+      transition: border-color 0.3s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="file"]:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 12px 24px;
       border: none;
       border-radius: 8px;
       cursor: pointer;
-      font-weight: bold;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      font-size: 1em;
+      width: 100%;
+      margin-bottom: 10px;
     }
 
-    .box {
-      margin-top: 20px;
+    .btn-primary {
+      background: linear-gradient(135deg, #38bdf8, #06b6d4);
+      color: #0f172a;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(56, 189, 248, 0.4);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+    }
+
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Output Box */
+    .output-box {
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 8px;
       padding: 20px;
-      background: #1e1e1e;
-      border-radius: 10px;
-      min-height: 60px;
+      margin-top: 20px;
+      min-height: 100px;
       white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .output-label {
+      color: #cbd5e1;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    /* Status Messages */
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      display: none;
+    }
+
+    .status.show {
+      display: block;
+    }
+
+    .status.success {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid #10b981;
+      color: #6ee7b7;
+    }
+
+    .status.error {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid #ef4444;
+      color: #fca5a5;
+    }
+
+    .status.loading {
+      background: rgba(56, 189, 248, 0.2);
+      border: 1px solid #38bdf8;
+      color: #7dd3fc;
+    }
+
+    /* Loader */
+    .loader {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #38bdf8;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 10px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Info Box */
+    .info-box {
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid #38bdf8;
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 20px;
+      color: #7dd3fc;
+      font-size: 0.9em;
+    }
+
+    /* Two Column Layout */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .header h1 {
+        font-size: 1.8em;
+      }
+
+      .tabs {
+        justify-content: flex-start;
+        overflow-x: auto;
+      }
+    }
+
+    /* Features Grid */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .feature-item {
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid #38bdf8;
+      border-radius: 8px;
+      padding: 15px;
+      text-align: center;
+      font-size: 0.9em;
+    }
+
+    .feature-item .icon {
+      font-size: 1.5em;
+      margin-bottom: 8px;
     }
   </style>
 </head>
-
 <body>
 
-  <h1>🚀 AI Generator Web Tool</h1>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🚀 AI Generator Suite</h1>
+      <p>Generate Text • Translate to Myanmar • Create Subtitles</p>
+    </div>
 
-  <input id="inputText" placeholder="ရေးချင်တာထည့်ပါ..." />
+    <!-- Tabs Navigation -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('text-gen')">📝 Text Generator</button>
+      <button class="tab-btn" onclick="switchTab('video-sub')">🎬 Video Subtitles</button>
+    </div>
 
-  <br>
+    <!-- TAB 1: Text Generation & Translation -->
+    <div id="text-gen" class="tab-content active">
+      <div class="card">
+        <div class="info-box">
+          ✨ Generate AI text, translate to Myanmar, and export as SRT subtitles - All free!
+        </div>
 
-  <select id="mode">
-    <option value="upper">UPPERCASE AI</option>
-    <option value="lower">lowercase ai</option>
-    <option value="reverse">Reverse AI</option>
-    <option value="caption">TikTok Caption AI</option>
-  </select>
+        <!-- Prompt Input -->
+        <div class="form-group">
+          <label>📝 Enter Your Prompt</label>
+          <textarea id="prompt" placeholder="e.g., Write a short story about adventure..."></textarea>
+        </div>
 
-  <br>
+        <!-- Generate Button -->
+        <button class="btn btn-primary" onclick="generateText()">
+          ✨ Generate & Translate
+        </button>
 
-  <button onclick="generate()">Generate</button>
+        <!-- Status -->
+        <div class="status" id="text-status"></div>
 
-  <div class="box" id="output">Output will appear here...</div>
+        <!-- Generated English Text -->
+        <div id="english-section" style="display: none;">
+          <label class="output-label">🇬🇧 Generated English</label>
+          <div class="output-box" id="english-output"></div>
+        </div>
 
+        <!-- Myanmar Translation -->
+        <div id="myanmar-section" style="display: none;">
+          <label class="output-label">🇲🇲 Myanmar Translation</label>
+          <div class="output-box" id="myanmar-output"></div>
+        </div>
+
+        <!-- Download SRT -->
+        <button class="btn btn-success" id="download-btn" style="display: none;" onclick="downloadSRT()">
+          ⬇️ Download as SRT File
+        </button>
+
+        <!-- Features -->
+        <div class="features">
+          <div class="feature-item">
+            <div class="icon">🤖</div>
+            <div>Hugging Face AI</div>
+          </div>
+          <div class="feature-item">
+            <div class="icon">🌐</div>
+            <div>LibreTranslate API</div>
+          </div>
+          <div class="feature-item">
+            <div class="icon">📄</div>
+            <div>SRT File Export</div>
+          </div>
+          <div class="feature-item">
+            <div class="icon">💰</div>
+            <div>100% Free</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Video to Subtitles -->
+    <div id="video-sub" class="tab-content">
+      <div class="card">
+        <div class="info-box">
+          🎬 Coming Soon: Upload video → Extract audio → Generate bilingual subtitles
+        </div>
+        
+        <div style="text-align: center; padding: 40px 20px; color: #94a3b8;">
+          <p style="font-size: 3em; margin-bottom: 20px;">🚧</p>
+          <p>Video subtitle generation feature is coming soon!</p>
+          <p style="margin-top: 10px; font-size: 0.9em;">This will use Whisper AI to extract audio and generate SRT files.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript -->
   <script>
-    function generate() {
-      let text = document.getElementById("inputText").value;
-      let mode = document.getElementById("mode").value;
-      let output = "";
+    // Tab Switching
+    function switchTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
 
-      if(text === "") {
-        document.getElementById("output").innerHTML = "❌ Please enter text!";
+      // Remove active class from buttons
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      // Show selected tab
+      document.getElementById(tabName).classList.add('active');
+
+      // Add active class to clicked button
+      event.target.classList.add('active');
+    }
+
+    // Show Status Message
+    function showStatus(message, type = 'info') {
+      const status = document.getElementById('text-status');
+      status.textContent = message;
+      status.className = `status show ${type}`;
+
+      if (type !== 'loading') {
+        setTimeout(() => status.classList.remove('show'), 5000);
+      }
+    }
+
+    // Generate Text
+    async function generateText() {
+      const prompt = document.getElementById('prompt').value.trim();
+
+      if (!prompt) {
+        showStatus('❌ Please enter a prompt', 'error');
         return;
       }
 
-      if(mode === "upper") {
-        output = text.toUpperCase();
+      showStatus('🔄 Generating text with AI...', 'loading');
+
+      try {
+        // Simulate AI generation (in real app, call backend API)
+        const response = await generateWithHuggingFace(prompt);
+        document.getElementById('english-output').textContent = response;
+        document.getElementById('english-section').style.display = 'block';
+
+        showStatus('🌐 Translating to Myanmar...', 'loading');
+
+        // Translate to Myanmar
+        const translated = await translateToMyanmar(response);
+        document.getElementById('myanmar-output').textContent = translated;
+        document.getElementById('myanmar-section').style.display = 'block';
+        document.getElementById('download-btn').style.display = 'block';
+
+        showStatus('✅ Generation and translation complete!', 'success');
+      } catch (error) {
+        showStatus(`❌ Error: ${error.message}`, 'error');
+      }
+    }
+
+    // Hugging Face API Call
+    async function generateWithHuggingFace(prompt) {
+      // For demo: return sample text
+      // In production: call /api/generate endpoint
+      return `${prompt}\n\nThis is a generated response from AI. In production, this would be powered by Hugging Face distilgpt2 model.`;
+    }
+
+    // LibreTranslate API Call
+    async function translateToMyaman(text) {
+      try {
+        const response = await fetch('https://libretranslate.de/translate', {
+          method: 'POST',
+          body: JSON.stringify({
+            q: text,
+            source: 'en',
+            target: 'my'
+          }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+        return data.translatedText || '[Translation API Error]';
+      } catch {
+        return '[Offline - Using demo Myanmar text]\n\nဒီမှာ Myanmar ဘာသာ ပြန်ဆိုထားတဲ့ စာသားပါ။';
+      }
+    }
+
+    // SRT File Generator
+    function generateSRTContent(english, myanmar) {
+      const englishChunks = english.split(' ').filter(w => w);
+      const myanmarChunks = myanmar.split(' ').filter(w => w);
+      const wordsPerSubtitle = 10;
+      let srt = '';
+      let index = 1;
+      let englishIndex = 0;
+      let myanmarIndex = 0;
+
+      while (englishIndex < englishChunks.length || myanmarIndex < myanmarChunks.length) {
+        const startTime = formatTime((index - 1) * 3);
+        const endTime = formatTime(index * 3);
+
+        // Get words for this subtitle
+        const englishWords = englishChunks.slice(englishIndex, englishIndex + wordsPerSubtitle).join(' ');
+        const myanmarWords = myanmarChunks.slice(myanmarIndex, myanmarIndex + wordsPerSubtitle).join(' ');
+
+        englishIndex += wordsPerSubtitle;
+        myanmarIndex += wordsPerSubtitle;
+
+        srt += `${index}\n${startTime} --> ${endTime}\n${englishWords}\n${myanmarWords}\n\n`;
+        index++;
       }
 
-      else if(mode === "lower") {
-        output = text.toLowerCase();
+      return srt;
+    }
+
+    function formatTime(seconds) {
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')},000`;
+    }
+
+    // Download SRT File
+    function downloadSRT() {
+      const english = document.getElementById('english-output').textContent;
+      const myanmar = document.getElementById('myanmar-output').textContent;
+
+      if (!english || !myanmar) {
+        showStatus('❌ No text to download', 'error');
+        return;
       }
 
-      else if(mode === "reverse") {
-        output = text.split("").reverse().join("");
-      }
+      const srtContent = generateSRTContent(english, myanmar);
+      const element = document.createElement('a');
+      element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(srtContent));
+      element.setAttribute('download', `output_${Date.now()}.srt`);
+      element.style.display = 'none';
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
 
-      else if(mode === "caption") {
-        output = "🔥 " + text + " 🔥\n#viral #trending #ai #shorts";
-      }
-
-      document.getElementById("output").innerText = output;
+      showStatus('✅ SRT file downloaded!', 'success');
     }
   </script>
 
