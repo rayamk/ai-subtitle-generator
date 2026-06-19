@@ -1,10 +1,67 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AI Subtitle Generator</title>
+  <title>AI Generator Web</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #111;
+      color: white;
+      text-align: center;
+      padding: 40px;
+    }
+
+    input {
+      width: 80%;
+      padding: 10px;
+      margin: 10px;
+      border-radius: 8px;
+      border: none;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #00c2ff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .box {
+      margin-top: 20px;
+      padding: 15px;
+      background: #222;
+      border-radius: 10px;
+      min-height: 50px;
+    }
+  </style>
 </head>
-<body style="text-align:center;font-family:Arial;background:#111;color:white;padding:50px;">
-<h2>🚀 AI Subtitle Generator</h2>
-<p>Website is working</p>
+
+<body>
+
+  <h1>🚀 AI Generator Web</h1>
+
+  <input id="text" placeholder="ရေးချင်တာထည့်ပါ..." />
+  <br>
+
+  <button onclick="generate()">Generate</button>
+
+  <div class="box" id="output">Output here...</div>
+
+  <script>
+    function generate() {
+      let input = document.getElementById("text").value;
+
+      if(input === "") {
+        document.getElementById("output").innerHTML = "ဘာမှမထည့်ထားဘူး 😅";
+        return;
+      }
+
+      document.getElementById("output").innerHTML =
+        "🤖 AI Output: " + input.toUpperCase();
+    }
+  </script>
+
 </body>
 </html>
