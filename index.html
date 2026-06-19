@@ -5,13 +5,17 @@
   <style>
     body {
       font-family: Arial;
-      background: #111;
+      background: #0f0f0f;
       color: white;
       text-align: center;
       padding: 40px;
     }
 
-    input {
+    h1 {
+      color: #00d4ff;
+    }
+
+    input, select {
       width: 80%;
       padding: 10px;
       margin: 10px;
@@ -21,7 +25,7 @@
 
     button {
       padding: 10px 20px;
-      background: #00c2ff;
+      background: #00d4ff;
       border: none;
       border-radius: 8px;
       cursor: pointer;
@@ -30,36 +34,64 @@
 
     .box {
       margin-top: 20px;
-      padding: 15px;
-      background: #222;
+      padding: 20px;
+      background: #1e1e1e;
       border-radius: 10px;
-      min-height: 50px;
+      min-height: 60px;
+      white-space: pre-wrap;
     }
   </style>
 </head>
 
 <body>
 
-  <h1>🚀 AI Generator Web</h1>
+  <h1>🚀 AI Generator Web Tool</h1>
 
-  <input id="text" placeholder="ရေးချင်တာထည့်ပါ..." />
+  <input id="inputText" placeholder="ရေးချင်တာထည့်ပါ..." />
+
+  <br>
+
+  <select id="mode">
+    <option value="upper">UPPERCASE AI</option>
+    <option value="lower">lowercase ai</option>
+    <option value="reverse">Reverse AI</option>
+    <option value="caption">TikTok Caption AI</option>
+  </select>
+
   <br>
 
   <button onclick="generate()">Generate</button>
 
-  <div class="box" id="output">Output here...</div>
+  <div class="box" id="output">Output will appear here...</div>
 
   <script>
     function generate() {
-      let input = document.getElementById("text").value;
+      let text = document.getElementById("inputText").value;
+      let mode = document.getElementById("mode").value;
+      let output = "";
 
-      if(input === "") {
-        document.getElementById("output").innerHTML = "ဘာမှမထည့်ထားဘူး 😅";
+      if(text === "") {
+        document.getElementById("output").innerHTML = "❌ Please enter text!";
         return;
       }
 
-      document.getElementById("output").innerHTML =
-        "🤖 AI Output: " + input.toUpperCase();
+      if(mode === "upper") {
+        output = text.toUpperCase();
+      }
+
+      else if(mode === "lower") {
+        output = text.toLowerCase();
+      }
+
+      else if(mode === "reverse") {
+        output = text.split("").reverse().join("");
+      }
+
+      else if(mode === "caption") {
+        output = "🔥 " + text + " 🔥\n#viral #trending #ai #shorts";
+      }
+
+      document.getElementById("output").innerText = output;
     }
   </script>
 
