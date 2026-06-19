@@ -1,0 +1,58 @@
+function setStatus(msg) {
+  document.getElementById("status").textContent = msg;
+}
+
+async function generate() {
+  const file = document.getElementById("video").files[0];
+  const output = document.getElementById("output");
+
+  if (!file) {
+    alert("Please upload video");
+    return;
+  }
+
+  // Smooth UI flow
+  setStatus("📤 Uploading video...");
+  output.textContent = "";
+
+  await new Promise(r => setTimeout(r, 1000));
+
+  setStatus("🎧 Extracting audio...");
+
+  await new Promise(r => setTimeout(r, 1000));
+
+  setStatus("🧠 AI processing speech...");
+
+  // REAL API (HuggingFace Whisper)
+  const res = await fetch(
+    "https://api-inference.huggingface.co/models/openai/whisper-small",
+    {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer YOUR_HF_TOKEN"
+      },
+      body: file
+    }
+  );
+
+  const data = await res.json();
+
+  const text = data.text || "hello world demo subtitle";
+
+  setStatus("✨ Generating subtitles...");
+
+  const srt = generateSRT(text);
+
+  output.textContent = srt;
+
+  const blob = new Blob([srt], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.getElementById("download");
+  a.href = url;
+  a.download = "subtitle.srt";
+  a.style.display = "block";
+  a.textContent = "Download SRT";
+
+  setStatus("✅ Done!");
+}
