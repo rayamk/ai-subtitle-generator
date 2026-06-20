@@ -1,0 +1,1 @@
+fetch("https://YOUR-BACKEND-URL/transcribe")
