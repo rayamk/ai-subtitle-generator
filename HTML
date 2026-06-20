@@ -1,7 +1,41 @@
-<input type="file" id="video" accept="video/*">
-<button onclick="generate()">Generate Subtitle</button>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Subtitle Generator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
 
-<div id="status">Ready</div>
-<pre id="output"></pre>
+<body>
 
-<a id="download" style="display:none;">Download SRT</a>
+  <!-- HEADER -->
+  <header>
+    <h1>AI Subtitle Generator</h1>
+  </header>
+
+  <!-- MAIN CONTENT (IMPORTANT FIX) -->
+  <main class="container">
+
+    <section>
+      <h2>Upload Video</h2>
+      <input type="file" id="inputText" accept="video/*">
+      <button onclick="generate()">Generate Subtitle</button>
+    </section>
+
+    <section>
+      <h2>Output</h2>
+      <textarea id="output" placeholder="Subtitle will appear here..."></textarea>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>© 2026 AI Subtitle Tool</p>
+  </footer>
+
+  <script src="script.js"></script>
+
+</body>
+</html>
