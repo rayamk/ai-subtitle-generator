@@ -1,58 +1,32 @@
-function setStatus(msg) {
-  document.getElementById("status").textContent = msg;
-}
+const srt = `1
+00:00:00,000 --> 00:00:03,000
+🎬 Loading video file...
 
-async function generate() {
-  const file = document.getElementById("video").files[0];
-  const output = document.getElementById("output");
+2
+00:00:03,000 --> 00:00:06,000
+File detected: ${file.name}
 
-  if (!file) {
-    alert("Please upload video");
-    return;
-  }
+3
+00:00:06,000 --> 00:00:09,000
+📊 Analyzing audio track...
 
-  // Smooth UI flow
-  setStatus("📤 Uploading video...");
-  output.textContent = "";
+4
+00:00:09,000 --> 00:00:12,000
+🧠 Running speech recognition (demo mode)
 
-  await new Promise(r => setTimeout(r, 1000));
+5
+00:00:12,000 --> 00:00:15,000
+⚠️ Real AI model not connected yet
 
-  setStatus("🎧 Extracting audio...");
+6
+00:00:15,000 --> 00:00:18,000
+💡 Connect Whisper API or backend server
 
-  await new Promise(r => setTimeout(r, 1000));
+7
+00:00:18,000 --> 00:00:22,000
+🚀 Next step: deploy Python backend (Flask / FastAPI)
 
-  setStatus("🧠 AI processing speech...");
-
-  // REAL API (HuggingFace Whisper)
-  const res = await fetch(
-    "https://api-inference.huggingface.co/models/openai/whisper-small",
-    {
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer YOUR_HF_TOKEN"
-      },
-      body: file
-    }
-  );
-
-  const data = await res.json();
-
-  const text = data.text || "hello world demo subtitle";
-
-  setStatus("✨ Generating subtitles...");
-
-  const srt = generateSRT(text);
-
-  output.textContent = srt;
-
-  const blob = new Blob([srt], { type: "text/plain" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.getElementById("download");
-  a.href = url;
-  a.download = "subtitle.srt";
-  a.style.display = "block";
-  a.textContent = "Download SRT";
-
-  setStatus("✅ Done!");
-}
+8
+00:00:22,000 --> 00:00:26,000
+✔ Subtitle preview generated successfully (mock data)
+`;
