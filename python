@@ -1,0 +1,59 @@
+# ၁။ Package တွေ Install လုပ်ပါ
+!pip install fastapi uvicorn openai-whisper torch ffmpeg-python nest-asyncio pyngrok
+
+# ၂။ FFmpeg Install
+!apt update && apt install -y ffmpeg
+
+# ၃။ Backend Code ကို main.py အဖြစ် သိမ်းပါ
+%%writefile main.py
+from fastapi import FastAPI, UploadFile, File
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+import whisper
+import ffmpeg
+import tempfile
+import os
+import nest_asyncio
+import uvicorn
+
+app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"])
+
+# Model ကို Pre-load လုပ်ထားမယ် (မြန်ဆန်ဖို့)
+model = whisper.load_model("base")
+
+@app.post("/upload")
+async def upload_video(file: UploadFile = File(...)):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
+        tmp.write(await file.read())
+        video_path = tmp.name
+    
+    audio_path = video_path + ".wav"
+    ffmpeg.input(video_path).output(audio_path, ac=1, ar=16000).run(quiet=True)
+    
+    result = model.transcribe(audio_path, language="my")
+    
+    srt_path = video_path + ".srt"
+    with open(srt_path, "w", encoding="utf-8") as f:
+        for i, seg in enumerate(result["segments"], 1):
+            s = seg["start"]
+            e = seg["end"]
+            f.write(f"{i}\n{format_time(s)} --> {format_time(e)}\n{seg['text']}\n\n")
+    
+    return FileResponse(srt_path, filename="myanmar_subtitles.srt")
+
+def format_time(t):
+    return f"{int(t//3600):02d}:{int((t%3600)//60):02d}:{int(t%60):02d},{int((t%1)*1000):03d}"
+
+# Server ကို နောက်ခံမှာ Run မယ်
+import threading
+def run_server():
+    uvicorn.run(app, host="0.0.0.0", port=5000)
+
+threading.Thread(target=run_server, daemon=True).start()
+print("✅ Server is running on port 5000")
+
+# ၄။ Colab Proxy နဲ့ Public URL ရယူပါ
+from google.colab.output import eval_js
+public_url = eval_js("google.colab.kernel.proxyPort(5000)")
+print(f"✅ Backend URL (ဒီ URL ကို Frontend မှာ ထည့်ပါ): {public_url}")
