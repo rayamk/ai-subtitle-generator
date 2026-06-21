@@ -1,3 +1,5 @@
+import sys
+import traceback
 import gradio as gr
 import whisper
 import tempfile
@@ -11,20 +13,34 @@ print("=" * 50)
 print("Starting application...")
 print("=" * 50)
 
-# ================= MODEL LOADING =================
-print("📥 Loading Whisper model...")
-model = whisper.load_model("base")
-print("✅ Whisper model loaded!")
+# Force all errors to be printed
+sys.stderr = sys.stdout
+
+try:
+    print("📥 Loading Whisper model...")
+    model = whisper.load_model("base")
+    print("✅ Whisper model loaded!")
+except Exception as e:
+    print(f"❌ ERROR loading Whisper: {e}")
+    traceback.print_exc()
+    sys.exit(1)
 
 # ================= TRANSLATION MODELS =================
-translation_models = {
-    "English → Myanmar": "Helsinki-NLP/opus-mt-en-my",
-    "English → Thai": "Helsinki-NLP/opus-mt-en-th",
-    "English → Vietnamese": "Helsinki-NLP/opus-mt-en-vi",
-    "English → Chinese": "Helsinki-NLP/opus-mt-en-zh",
-    "English → Japanese": "Helsinki-NLP/opus-mt-en-jap",
-    "English → Korean": "Helsinki-NLP/opus-mt-en-ko",
-}
+try:
+    print("📥 Setting up translation models...")
+    translation_models = {
+        "English → Myanmar": "Helsinki-NLP/opus-mt-en-my",
+        "English → Thai": "Helsinki-NLP/opus-mt-en-th",
+        "English → Vietnamese": "Helsinki-NLP/opus-mt-en-vi",
+        "English → Chinese": "Helsinki-NLP/opus-mt-en-zh",
+        "English → Japanese": "Helsinki-NLP/opus-mt-en-jap",
+        "English → Korean": "Helsinki-NLP/opus-mt-en-ko",
+    }
+    print("✅ Translation models configured!")
+except Exception as e:
+    print(f"❌ ERROR setting up translation: {e}")
+    traceback.print_exc()
+    sys.exit(1)
 
 loaded_tokenizer = None
 loaded_mt_model = None
@@ -104,73 +120,51 @@ def transcribe(video, source_language, target_language):
 print("🖥️ Building Gradio UI...")
 
 try:
-    demo = gr.Blocks(title="🎬 AI Subtitle Generator")
-    print("✅ Blocks created")
-except Exception as e:
-    print(f"❌ Error creating Blocks: {e}")
-    raise
-
-with demo:
-    print("📍 Inside Blocks context")
-    
-    gr.Markdown("""
-    # 🎬 AI Subtitle Generator
-    ### Professional Transcription & Translation Powered by AI
-    """)
-    print("✅ Markdown added")
-    
-    with gr.Row():
-        print("📍 Inside Row")
+    # SUPER SIMPLE UI - No nested components
+    with gr.Blocks(title="🎬 AI Subtitle Generator") as demo:
+        gr.Markdown("# 🎬 AI Subtitle Generator")
+        gr.Markdown("### Professional Transcription & Translation Powered by AI")
         
-        with gr.Column(scale=1):
-            print("📍 Inside Column 1")
-            video_input = gr.Video(label="📹 Upload Video", height=300)
-            print("✅ Video input added")
-            
-            with gr.Row():
-                print("📍 Inside nested Row")
+        with gr.Row():
+            with gr.Column():
+                video_input = gr.Video(label="Upload Video")
                 source_lang = gr.Dropdown(
-                    choices=["Auto Detect", "English", "Myanmar", "Thai", "Vietnamese", "Chinese", "Japanese", "Korean"],
-                    value="Auto Detect",
-                    label="🎯 Source Language"
+                    ["Auto Detect", "English", "Myanmar", "Thai", "Vietnamese", "Chinese", "Japanese", "Korean"],
+                    label="Source Language"
                 )
-                print("✅ Source dropdown added")
-                
                 target_lang = gr.Dropdown(
-                    choices=["English", "Myanmar", "Thai", "Vietnamese", "Chinese", "Japanese", "Korean"],
-                    value="Myanmar",
-                    label="🌏 Target Language"
+                    ["English", "Myanmar", "Thai", "Vietnamese", "Chinese", "Japanese", "Korean"],
+                    label="Target Language"
                 )
-                print("✅ Target dropdown added")
+                submit_btn = gr.Button("Generate Subtitles")
             
-            submit_btn = gr.Button("⚡ Generate Subtitles", variant="primary")
-            print("✅ Button added")
-            
-        with gr.Column(scale=1):
-            print("📍 Inside Column 2")
-            sub_out = gr.Textbox(label="📝 Subtitle Preview", lines=15)
-            print("✅ Textbox added")
-            
-            file_out = gr.File(label="📥 Download SRT")
-            print("✅ File output added")
+            with gr.Column():
+                sub_out = gr.Textbox(label="Subtitle Preview", lines=15)
+                file_out = gr.File(label="Download SRT")
+        
+        submit_btn.click(transcribe, [video_input, source_lang, target_lang], [sub_out, file_out])
     
-    submit_btn.click(
-        transcribe, 
-        inputs=[video_input, source_lang, target_lang], 
-        outputs=[sub_out, file_out]
-    )
-    print("✅ Click handler added")
+    print("✅ UI built successfully!")
+    
+except Exception as e:
+    print(f"❌ ERROR building UI: {e}")
+    traceback.print_exc()
+    sys.exit(1)
 
-print("✅ UI built successfully!")
 print("=" * 50)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    print(f"🚀 Starting server on port {port}...")
-    print("=" * 50)
-    
-    demo.launch(
-        server_name="0.0.0.0", 
-        server_port=port,
-        theme=gr.themes.Soft(primary_hue="indigo")
-    )
+    try:
+        port = int(os.environ.get("PORT", 8080))
+        print(f"🚀 Starting server on port {port}...")
+        print("=" * 50)
+        
+        demo.launch(
+            server_name="0.0.0.0", 
+            server_port=port,
+            theme=gr.themes.Soft(primary_hue="indigo")
+        )
+    except Exception as e:
+        print(f"❌ ERROR launching: {e}")
+        traceback.print_exc()
+        sys.exit(1)
