@@ -2,8 +2,5 @@ gradio
 openai-whisper
 transformers
 torch
-python-multipart
-ffmpeg-python
+torchaudio
 sentencepiece
-protobuf
-
