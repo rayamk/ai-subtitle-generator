@@ -1,4 +1,4 @@
-// Colab URL ကို အောက်ပါအတိုင်း ထည့်ပါ
+// Colab URL 
 const BACKEND_URL = 'https://5000-m-s-kkb-use1c0-3nq7f7l5l8mn9-c.us-east1-0.prod.colab.dev';
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -6,10 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const status = document.getElementById('status');
     const downloadLink = document.getElementById('downloadLink');
     
-    if (!form) {
-        console.error('Form not found!');
-        return;
-    }
+    if (!form) return;
     
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -22,14 +19,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        status.textContent = '⏳ လုပ်ဆောင်နေပါသည်...';
+        status.textContent = '⏳ လုပ်ဆောင်နေပါသည်... (ခဏစောင့်ပါ)';
         downloadLink.style.display = 'none';
         
         const formData = new FormData();
         formData.append('file', file);
         
         try {
-            // URL နှင့် path ကို ပေါင်းစပ်ထားသည်
             const response = await fetch(`${BACKEND_URL}/upload`, {
                 method: 'POST',
                 body: formData
