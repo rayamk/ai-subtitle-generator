@@ -23,11 +23,24 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('target_language', targetLang.value);
 
         try {
-            // FIX: Point to your Railway backend
-            const response = await fetch('https://ai-subtitle-generator-production-650b.up.railway.app/api/transcribe', {
+            // Use the correct backend URL
+            const backendUrl = 'https://ai-subtitle-generator-production-650b.up.railway.app';
+            
+            console.log('Sending request to:', backendUrl + '/api/transcribe');
+            
+            const response = await fetch(backendUrl + '/api/transcribe', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                // Add these headers for better compatibility
+                headers: {
+                    'Accept': 'application/json',
+                },
+                mode: 'cors' // Explicitly enable CORS
             });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
 
             const data = await response.json();
 
@@ -41,8 +54,8 @@ document.addEventListener('DOMContentLoaded', function() {
             downloadBtn.style.display = 'inline-block';
 
         } catch (error) {
-            console.error('Error:', error);
-            subtitlePreview.textContent = '❌ Error: ' + error.message;
+            console.error('Error details:', error);
+            subtitlePreview.textContent = '❌ Error: ' + error.message + '\n\nMake sure the backend is running at:\nhttps://ai-subtitle-generator-production-650b.up.railway.app';
         }
     });
 
