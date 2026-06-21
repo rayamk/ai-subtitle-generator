@@ -1,58 +1,62 @@
-// 🔥 သင့် Colab URL ကို ဒီမှာထည့်ပါ (အဆုံးတွင် / မထည့်ပါနှင့်)
-const BACKEND_URL = 'https://5000-m-s-kkb-use1c0-3nq7f7l5l8mn9-c.us-east1-0.prod.colab.dev';
-
-console.log('Script loaded successfully');
-
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('uploadForm');
-    const status = document.getElementById('status');
-    const downloadLink = document.getElementById('downloadLink');
-    const fileInput = document.getElementById('videoFile');
-    
-    if (!form) {
-        console.error('❌ Form not found!');
-        return;
-    }
-    
-    form.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const file = fileInput.files[0];
-        
+    const videoInput = document.getElementById('videoInput');
+    const generateBtn = document.getElementById('generateBtn');
+    const subtitlePreview = document.getElementById('subtitlePreview');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const sourceLang = document.getElementById('sourceLang');
+    const targetLang = document.getElementById('targetLang');
+
+    let currentSrt = '';
+
+    generateBtn.addEventListener('click', async function() {
+        const file = videoInput.files[0];
         if (!file) {
-            status.textContent = '❌ ဗီဒီယိုဖိုင် ရွေးပေးပါ။';
+            alert('Please upload a video file first!');
             return;
         }
-        
-        status.textContent = '⏳ လုပ်ဆောင်နေပါသည်... (ခဏစောင့်ပါ)';
-        downloadLink.style.display = 'none';
-        
+
+        subtitlePreview.textContent = '⏳ Processing... Please wait.';
+
         const formData = new FormData();
-        formData.append('file', file);
-        
+        formData.append('video', file);
+        formData.append('source_language', sourceLang.value);
+        formData.append('target_language', targetLang.value);
+
         try {
-            // URL ကို သေချာစေရန် `${BACKEND_URL}/upload` ဟု သုံးပါ
-            const response = await fetch(`${BACKEND_URL}/upload`, {
+            const response = await fetch('/api/transcribe', {
                 method: 'POST',
                 body: formData
             });
+
+            const data = await response.json();
             
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                
-                downloadLink.href = url;
-                downloadLink.download = 'myanmar_subtitles.srt';
-                downloadLink.style.display = 'block';
-                downloadLink.textContent = '📥 မြန်မာ SRT ကို Download လုပ်ပါ';
-                status.textContent = '✅ ပြီးပါပြီ။';
-            } else {
-                status.textContent = '❌ Error: ' + response.status;
-                console.error('Server error:', await response.text());
+            if (data.error) {
+                subtitlePreview.textContent = '❌ Error: ' + data.error;
+                return;
             }
+
+            currentSrt = data.srt;
+            subtitlePreview.textContent = data.preview || data.srt;
+            downloadBtn.style.display = 'inline-block';
         } catch (error) {
-            status.textContent = '❌ Server နဲ့ ချိတ်ဆက်လို့မရပါ။ (Colab Run ထားရဲ့လား စစ်ဆေးပါ)';
-            console.error('Fetch error:', error);
+            subtitlePreview.textContent = '❌ Error: ' + error.message;
         }
+    });
+
+    downloadBtn.addEventListener('click', function() {
+        if (!currentSrt) {
+            alert('No subtitles to download!');
+            return;
+        }
+
+        const blob = new Blob([currentSrt], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'subtitles.srt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     });
 });
