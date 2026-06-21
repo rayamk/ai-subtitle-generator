@@ -13,15 +13,12 @@ model = whisper.load_model("base")
 
 # ================= TRANSLATION MODELS =================
 translation_models = {
-    # Direct translations
     "English → Myanmar": "Helsinki-NLP/opus-mt-en-my",
     "English → Thai": "Helsinki-NLP/opus-mt-en-th",
     "English → Vietnamese": "Helsinki-NLP/opus-mt-en-vi",
     "English → Chinese": "Helsinki-NLP/opus-mt-en-zh",
     "English → Japanese": "Helsinki-NLP/opus-mt-en-jap",
     "English → Korean": "Helsinki-NLP/opus-mt-en-ko",
-    
-    # Reverse translations
     "Myanmar → English": "Helsinki-NLP/opus-mt-my-en",
     "Thai → English": "Helsinki-NLP/opus-mt-th-en",
     "Vietnamese → English": "Helsinki-NLP/opus-mt-vi-en",
@@ -64,7 +61,6 @@ def extract_audio_from_video(video_path, output_audio_path):
 def translate_with_bridge(text, source_lang, target_lang):
     """Translate using English as a bridge language"""
     try:
-        # Step 1: Source → English
         source_to_english_key = f"{source_lang} → English"
         if source_to_english_key in translation_models:
             load_translation_model(translation_models[source_to_english_key])
@@ -72,7 +68,6 @@ def translate_with_bridge(text, source_lang, target_lang):
             outputs = loaded_mt_model.generate(**inputs, max_length=512, num_beams=1)
             english_text = loaded_tokenizer.decode(outputs[0], skip_special_tokens=True)
             
-            # Step 2: English → Target
             english_to_target_key = f"English → {target_lang}"
             if english_to_target_key in translation_models:
                 load_translation_model(translation_models[english_to_target_key])
@@ -96,7 +91,6 @@ def transcribe(video, source_language, target_language):
     if not extract_audio_from_video(str(video), audio_path):
         return "❌ Audio extraction failed", None
     
-    # Language mapping for Whisper
     lang_map = {
         "Auto Detect": None,
         "English": "en",
@@ -117,11 +111,9 @@ def transcribe(video, source_language, target_language):
     translated_count = 0
     bridge_used = False
     
-    # Check if direct translation exists
     direct_key = f"{source_language} → {target_language}"
     reverse_key = f"{target_language} → {source_language}"
     
-    # Check if we need to use bridge translation
     if source_language != "Auto Detect" and source_language != target_language:
         if direct_key in translation_models:
             load_translation_model(translation_models[direct_key])
@@ -175,16 +167,15 @@ def transcribe(video, source_language, target_language):
     
     return preview, srt_file
 
-# ================= UI - FIXED FOR GRADIO 6.0 =================
+# ================= UI =================
+print("🖥️ Building Gradio UI...")
 
-# FIX 1: Remove theme from Blocks constructor
 demo = gr.Blocks(title="🎬 AI Subtitle Generator")
 
 with demo:
     gr.Markdown("""
     # 🎬 AI Subtitle Generator
     ### Professional Transcription & Translation Powered by AI
-    **Supported Languages:** English, Myanmar, Thai, Vietnamese, Chinese, Japanese, Korean
     """)
     
     with gr.Row():
@@ -203,7 +194,6 @@ with demo:
                     label="🌏 Target Language"
                 )
             
-            # FIX 2: Remove 'full_width' parameter - use variant only
             submit_btn = gr.Button("⚡ Generate Subtitles", variant="primary")
             
         with gr.Column(scale=1):
@@ -216,11 +206,13 @@ with demo:
         outputs=[sub_out, file_out]
     )
 
+print("✅ UI built successfully!")
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-    # FIX 3: Move theme to launch() method
+    print(f"🚀 Starting server on port {port}...")
     demo.launch(
         server_name="0.0.0.0", 
         server_port=port,
         theme=gr.themes.Soft(primary_hue="indigo")
-)
+            )
