@@ -23,7 +23,8 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('target_language', targetLang.value);
 
         try {
-            const response = await fetch('/api/transcribe', {
+            // FIX: Point to your Railway backend
+            const response = await fetch('https://ai-subtitle-generator-production-650b.up.railway.app/api/transcribe', {
                 method: 'POST',
                 body: formData
             });
@@ -36,21 +37,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             currentSrt = data.srt;
-            
-            // FIX: Display the actual preview, not an error!
             subtitlePreview.textContent = data.preview || data.srt;
-            
             downloadBtn.style.display = 'inline-block';
-            
+
         } catch (error) {
-            console.error(error);
+            console.error('Error:', error);
             subtitlePreview.textContent = '❌ Error: ' + error.message;
         }
     });
 
     downloadBtn.addEventListener('click', function() {
         if (!currentSrt) {
-            alert('No subtitles to download!');
+            alert('No subtitles to download! Generate subtitles first.');
             return;
         }
 
