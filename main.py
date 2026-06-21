@@ -8,7 +8,6 @@ import subprocess
 import re
 import uuid
 from datetime import datetime
-from transformers import MarianMTModel, MarianTokenizer
 from googletrans import Translator
 
 app = FastAPI(title="AI Subtitle Generator", version="2.0.0")
@@ -32,28 +31,10 @@ print("📥 Loading Whisper model...")
 model = whisper.load_model("tiny")
 print("✅ Whisper model loaded!")
 
-print("📥 Loading translation model (English → Myanmar)...")
-try:
-    translation_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-mn")
-    translation_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-en-mn")
-    translator = Translator()
-    translation_available = True
-    
-def translate_to_myanmar(text):
-    if not translation_available:
-        return text
-    try:
-        result = translator.translate(text, dest='my')
-        return result.text
-except Exception as e:
-        print(f"Translation error: {e}")
-        return text  
-        
-    print("✅ Translation model loaded!")
-    translation_available = True
-except Exception as e:
-    print(f"⚠️ Translation model not available: {e}")
-    translation_available = False
+print("📥 Loading Google Translate...")
+translator = Translator()
+translation_available = True
+print("✅ Google Translate ready!")
 
 def extract_audio(video_path):
     audio_path = os.path.join(tempfile.gettempdir(), f"{uuid.uuid4()}.wav")
@@ -81,18 +62,9 @@ def detect_language(text):
     return 'english'
 
 def translate_to_myanmar(text):
-    if not translation_available:
-        return text
     try:
-        chunks = [text[i:i+256] for i in range(0, len(text), 256)]
-        translated_chunks = []
-        for chunk in chunks:
-            inputs = translation_tokenizer(chunk, return_tensors="pt", truncation=True, max_length=512, padding=True)
-            outputs = translation_model.generate(**inputs, max_length=512, num_beams=5, early_stopping=True, temperature=0.7)
-            translated = translation_tokenizer.decode(outputs[0], skip_special_tokens=True)
-            translated_chunks.append(translated)
-        result = " ".join(translated_chunks)
-        return result
+        result = translator.translate(text, dest='my')
+        return result.text
     except Exception as e:
         print(f"Translation error: {e}")
         return text
@@ -210,7 +182,7 @@ def status():
         "translation_available": translation_available,
         "models": {
             "whisper": "tiny",
-            "translation": "Helsinki-NLP/opus-mt-en-mn" if translation_available else "not loaded"
+            "translation": "Google Translate"
         }
     }
 
