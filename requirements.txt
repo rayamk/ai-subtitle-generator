@@ -3,3 +3,7 @@ openai-whisper
 transformers
 torch
 python-multipart
+ffmpeg-python
+sentencepiece
+protobuf
+
