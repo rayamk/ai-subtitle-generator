@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        subtitlePreview.textContent = '⏳ Processing... Please wait.';
+        subtitlePreview.textContent = '⏳ Processing... Please wait!';
 
         const formData = new FormData();
         formData.append('video', file);
@@ -29,16 +29,21 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             const data = await response.json();
-            
+
             if (data.error) {
                 subtitlePreview.textContent = '❌ Error: ' + data.error;
                 return;
             }
 
             currentSrt = data.srt;
+            
+            // FIX: Display the actual preview, not an error!
             subtitlePreview.textContent = data.preview || data.srt;
+            
             downloadBtn.style.display = 'inline-block';
+            
         } catch (error) {
+            console.error(error);
             subtitlePreview.textContent = '❌ Error: ' + error.message;
         }
     });
@@ -49,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const blob = new Blob([currentSrt], { type: 'text/plain' });
+        const blob = new Blob([currentSrt], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
