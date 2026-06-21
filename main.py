@@ -7,9 +7,9 @@ import subprocess
 import torch
 from transformers import MarianMTModel, MarianTokenizer
 
-# ================= WHISPER MODEL =================
+# ================= MODEL LOADING =================
 print("📥 Loading Whisper model...")
-model = whisper.load_model("tiny")  # Lightweight model
+model = whisper.load_model("tiny")
 
 # ================= TRANSLATION MODELS =================
 translation_models = {
@@ -28,33 +28,19 @@ def load_translation_model(model_path):
     global loaded_tokenizer, loaded_mt_model, current_model_name
     if current_model_name == model_path: return True
     try:
-        print(f"🔄 Loading translation model: {model_path}")
         loaded_tokenizer = MarianTokenizer.from_pretrained(model_path)
         loaded_mt_model = MarianMTModel.from_pretrained(model_path)
         current_model_name = model_path
         return True
-    except Exception as e:
-        print(f"❌ Translation model failed: {e}")
-        return False
+    except: return False
 
-# ================= HELPERS =================
+# ================= FUNCTIONS =================
 def format_time(seconds):
     ms = int((seconds % 1) * 1000)
     s = int(seconds) % 60
     m = int(seconds // 60) % 60
     h = int(seconds // 3600)
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
-
-def clean_text(text):
-    return re.sub(r"\s+", " ", text.strip())
-
-def translate_to_target(text, target_model_path):
-    if not text.strip() or loaded_tokenizer is None or loaded_mt_model is None: return text
-    try:
-        inputs = loaded_tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
-        outputs = loaded_mt_model.generate(**inputs, max_length=512, num_beams=1)
-        return loaded_tokenizer.decode(outputs[0], skip_special_tokens=True)
-    except: return text
 
 def extract_audio_from_video(video_path, output_audio_path):
     try:
@@ -63,24 +49,29 @@ def extract_audio_from_video(video_path, output_audio_path):
         return os.path.exists(output_audio_path)
     except: return False
 
-# ================= TRANSCRIPTION =================
 def transcribe(video, language_code, target_language):
-    if video is None: return "❌ Please upload a video", None
+    if video is None: return "❌ Video not found", None
     
     model_path = translation_models.get(target_language)
     load_translation_model(model_path)
     
     audio_path = os.path.join(tempfile.gettempdir(), "temp_audio.wav")
-    if not extract_audio_from_video(str(video), audio_path):
-        return "❌ Audio extraction failed", None
+    if not extract_audio_from_video(str(video), audio_path): return "❌ Audio extraction failed", None
         
     result = model.transcribe(audio_path, language=language_code if language_code != "Auto" else None, verbose=False)
     
     srt = ""
     for i, seg in enumerate(result["segments"], 1):
-        text = clean_text(seg["text"])
+        text = re.sub(r"\s+", " ", seg["text"].strip())
         if len(text) < 2: continue
-        translated = translate_to_target(text, model_path)
+        
+        # Translate
+        translated = text
+        if loaded_tokenizer and loaded_mt_model:
+            inputs = loaded_tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+            outputs = loaded_mt_model.generate(**inputs, max_length=512, num_beams=1)
+            translated = loaded_tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
         srt += f"{i}\n{format_time(seg['start'])} --> {format_time(seg['end'])}\n{translated}\n\n"
         
     srt_file = os.path.join(tempfile.gettempdir(), "subtitles.srt")
@@ -88,22 +79,21 @@ def transcribe(video, language_code, target_language):
     return srt, srt_file
 
 # ================= UI =================
-with gr.Blocks(title="🎬 AI Subtitle Generator") as demo:
-    gr.Markdown("# 🌏 AI Subtitle Generator")
+with gr.Blocks(title="🎬 AI Subtitle Myanmar", theme=gr.themes.Soft(primary_hue="indigo")) as demo:
+    gr.HTML("<h1 style='text-align:center;'>🌏 AI Subtitle Generator</h1>")
     with gr.Row():
-        video_input = gr.Video(label="Upload Video")
         with gr.Column():
+            video_input = gr.Video(label="Upload Video")
             lang_in = gr.Dropdown(["Auto Detect", "English", "Tiếng Việt", "ไทย"], value="Auto Detect", label="Source")
             lang_out = gr.Dropdown(list(translation_models.keys()), value="English → Myanmar", label="Target")
-            submit_btn = gr.Button("⚡ Generate")
-    sub_out = gr.Textbox(label="Subtitle Preview")
-    file_out = gr.File(label="📥 Download")
+            submit_btn = gr.Button("⚡ Generate Subtitles", variant="primary")
+        with gr.Column():
+            sub_out = gr.Textbox(label="Subtitle Preview", lines=12)
+            file_out = gr.File(label="📥 Download SRT")
     
     submit_btn.click(transcribe, inputs=[video_input, lang_in, lang_out], outputs=[sub_out, file_out])
 
-# ================= LAUNCH =================
 if __name__ == "__main__":
-    # Railway တွင် အလုပ်လုပ်စေရန် port ကို သေချာသတ်မှတ်ပေးခြင်း
     port = int(os.environ.get("PORT", 8080))
     demo.launch(server_name="0.0.0.0", server_port=port)
-    
+        
