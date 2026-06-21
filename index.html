@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Subtitle Generator</title>
+    <title>🎬 AI Subtitle Generator</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🎬 AI Subtitle Generator</h1>
+            <h1>🎬 <span>AI Subtitle Generator</span></h1>
             <p>Professional Transcription & Translation Powered by AI</p>
         </header>
         
         <main>
             <div class="upload-section">
-                <div class="drop-zone">
+                <div class="drop-zone" id="dropZone">
                     <p>📤 Drop your video here</p>
                     <p class="small">or click to browse</p>
                     <input type="file" accept="video/*" id="videoInput">
@@ -25,27 +25,27 @@
                     <div class="form-group">
                         <label>🎯 Source Language</label>
                         <select id="sourceLang">
-                            <option value="auto">Auto Detect</option>
-                            <option value="en">English</option>
-                            <option value="my">Myanmar</option>
-                            <option value="th">Thai</option>
-                            <option value="vi">Vietnamese</option>
-                            <option value="zh">Chinese</option>
-                            <option value="ja">Japanese</option>
-                            <option value="ko">Korean</option>
+                            <option value="Auto Detect">Auto Detect</option>
+                            <option value="English">English</option>
+                            <option value="Myanmar">Myanmar</option>
+                            <option value="Thai">Thai</option>
+                            <option value="Vietnamese">Vietnamese</option>
+                            <option value="Chinese">Chinese</option>
+                            <option value="Japanese">Japanese</option>
+                            <option value="Korean">Korean</option>
                         </select>
                     </div>
                     
                     <div class="form-group">
                         <label>🌏 Target Language</label>
                         <select id="targetLang">
-                            <option value="my">Myanmar</option>
-                            <option value="en">English</option>
-                            <option value="th">Thai</option>
-                            <option value="vi">Vietnamese</option>
-                            <option value="zh">Chinese</option>
-                            <option value="ja">Japanese</option>
-                            <option value="ko">Korean</option>
+                            <option value="Myanmar">Myanmar</option>
+                            <option value="English">English</option>
+                            <option value="Thai">Thai</option>
+                            <option value="Vietnamese">Vietnamese</option>
+                            <option value="Chinese">Chinese</option>
+                            <option value="Japanese">Japanese</option>
+                            <option value="Korean">Korean</option>
                         </select>
                     </div>
                 </div>
@@ -56,7 +56,7 @@
             <div class="output-section">
                 <div class="preview">
                     <h3>📝 Subtitle Preview</h3>
-                    <div id="subtitlePreview">Your subtitles will appear here...</div>
+                    <div id="subtitlePreview"></div>
                 </div>
                 
                 <div class="download">
