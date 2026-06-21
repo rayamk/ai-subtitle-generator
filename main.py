@@ -61,7 +61,6 @@ def extract_audio(video_path):
 # ================= 3. LANGUAGE DETECTION =================
 def detect_language(text):
     """Detect language from text sample"""
-    # Common language patterns
     patterns = {
         'english': r'[a-zA-Z]',
         'chinese': r'[\u4e00-\u9fff]',
@@ -89,7 +88,6 @@ def translate_to_myanmar(text):
         return text
     
     try:
-        # Split long text into smaller chunks for better translation
         chunks = [text[i:i+256] for i in range(0, len(text), 256)]
         translated_chunks = []
         
@@ -104,9 +102,9 @@ def translate_to_myanmar(text):
             outputs = translation_model.generate(
                 **inputs, 
                 max_length=512, 
-                num_beams=5,  # Better quality
+                num_beams=5,
                 early_stopping=True,
-                temperature=0.7  # More natural
+                temperature=0.7
             )
             translated = translation_tokenizer.decode(outputs[0], skip_special_tokens=True)
             translated_chunks.append(translated)
@@ -120,24 +118,20 @@ def translate_to_myanmar(text):
 # ================= 5. MYANMAR GRAMMAR CLEANUP =================
 def cleanup_myanmar_grammar(text):
     """Clean up Myanmar text for better readability"""
-    # Remove repeated spaces
     text = re.sub(r'\s+', ' ', text)
     
-    # Fix common Myanmar grammar issues
     replacements = {
-        r'သည်\s+': 'က ',  # Fix particle
-        r'သည်။': 'တယ်။',  # Better ending
-        r'သည်\s': 'တယ် ',  # Better ending
-        r'က\s+က': 'က ',  # Remove duplicate
-        r'သည်\s+သည်': 'သည်',  # Remove duplicate
+        r'သည်\s+': 'က ',
+        r'သည်။': 'တယ်။',
+        r'သည်\s': 'တယ် ',
+        r'က\s+က': 'က ',
+        r'သည်\s+သည်': 'သည်',
     }
     
     for pattern, replacement in replacements.items():
         text = re.sub(pattern, replacement, text)
     
-    # Remove excessive particles
-    text = re.sub(r'(\w+)\s+\1', r'\1', text)  # Remove repeated words
-    
+    text = re.sub(r'(\w+)\s+\1', r'\1', text)
     return text.strip()
 
 # ================= 6. FORMAT TIME =================
@@ -157,7 +151,6 @@ async def transcribe(
     source_language: str = Form("auto")
 ):
     try:
-        # ===== STEP 1: Save video =====
         print("📤 Step 1: Saving video...")
         video_id = str(uuid.uuid4())
         video_path = os.path.join("uploads", f"{video_id}_{video.filename}")
@@ -166,20 +159,16 @@ async def transcribe(
             while chunk := await video.read(1024 * 1024):
                 f.write(chunk)
         
-        # ===== STEP 2: Extract audio =====
         print("🎵 Step 2: Extracting audio...")
         audio_path = extract_audio(video_path)
         if not audio_path:
             return {"error": "Failed to extract audio from video"}
         
-        # ===== STEP 3: Transcribe with Whisper =====
         print("🎤 Step 3: Transcribing with Whisper...")
         
-        # Auto-detect language or use specified
         if source_language == "auto":
             result = model.transcribe(audio_path, verbose=False)
         else:
-            # Map language to Whisper code
             lang_map = {
                 "english": "en",
                 "chinese": "zh",
@@ -192,14 +181,12 @@ async def transcribe(
             lang_code = lang_map.get(source_language, None)
             result = model.transcribe(audio_path, language=lang_code, verbose=False)
         
-        # ===== STEP 4: Generate SRT with Translation =====
         print("📝 Step 4: Generating subtitles...")
         srt = ""
         original_srt = ""
         translated_count = 0
         detected_lang = "english"
         
-        # Detect language from first segment
         if result["segments"]:
             first_text = result["segments"][0]["text"]
             detected_lang = detect_language(first_text)
@@ -210,14 +197,11 @@ async def transcribe(
             if len(original_text) < 2:
                 continue
             
-            # Store original
             original_srt += f"{i}\n{format_time(seg['start'])} --> {format_time(seg['end'])}\n{original_text}\n\n"
             
-            # Translate if requested
             if translate == "true" and translation_available and target_language == "myanmar":
                 try:
                     translated = translate_to_myanmar(original_text)
-                    # Cleanup Myanmar grammar
                     translated = cleanup_myanmar_grammar(translated)
                     final_text = translated
                     translated_count += 1
@@ -229,28 +213,23 @@ async def transcribe(
             
             srt += f"{i}\n{format_time(seg['start'])} --> {format_time(seg['end'])}\n{final_text}\n\n"
         
-        # ===== STEP 5: Save files =====
         print("💾 Step 5: Saving files...")
         
-        # Save translated SRT
         srt_filename = f"{video_id}.srt"
         srt_path = os.path.join("outputs", srt_filename)
         with open(srt_path, "w", encoding="utf-8") as f:
             f.write(srt)
         
-        # Save original SRT (for comparison)
         original_filename = f"{video_id}_original.srt"
         original_path = os.path.join("outputs", original_filename)
         with open(original_path, "w", encoding="utf-8") as f:
             f.write(original_srt)
         
-        # ===== STEP 6: Clean up =====
         os.remove(video_path)
         os.remove(audio_path)
         
         print(f"✅ Complete! Translated {translated_count} segments to Myanmar")
         
-        # Return with metadata
         return FileResponse(
             srt_path,
             media_type="text/plain",
@@ -276,7 +255,7 @@ def status():
         "translation_available": translation_available,
         "models": {
             "whisper": "base",
-            "translation": "Helsinki-NLP/opus-mt-en-my"
+            "translation": "Helsinki-NLP/opus-mt-en-my" if translation_available else "not loaded"
         }
     }
 
@@ -289,8 +268,7 @@ def root():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Subtitle Generator - Professional</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+    <title>AI Subtitle Generator</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -307,7 +285,7 @@ def root():
             backdrop-filter: blur(20px);
             border-radius: 24px;
             padding: 40px;
-            max-width: 750px;
+            max-width: 600px;
             width: 100%;
             border: 1px solid rgba(255,255,255,0.1);
             box-shadow: 0 25px 50px rgba(0,0,0,0.5);
@@ -399,7 +377,7 @@ def root():
             font-size: 0.85rem;
             margin-bottom: 5px;
         }
-        .settings-group select, .settings-group input[type="checkbox"] {
+        .settings-group select {
             width: 100%;
             padding: 10px 12px;
             background: rgba(255,255,255,0.05);
@@ -425,39 +403,6 @@ def root():
             height: 18px;
             accent-color: #667eea;
             cursor: pointer;
-        }
-        
-        .flow-diagram {
-            margin-top: 20px;
-            padding: 20px;
-            background: rgba(255,255,255,0.03);
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-        .flow-step {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 6px 0;
-            color: #a8a8d8;
-            font-size: 0.85rem;
-        }
-        .flow-step .num {
-            width: 24px;
-            height: 24px;
-            background: rgba(102,126,234,0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7rem;
-            color: #667eea;
-            font-weight: 600;
-            flex-shrink: 0;
-        }
-        .flow-step .arrow {
-            color: #444466;
-            margin: 0 4px;
         }
         
         .btn-generate {
@@ -494,30 +439,6 @@ def root():
         @keyframes spin { to { transform: rotate(360deg); } }
         .btn-generate.loading .spinner { display: block; }
         .btn-generate.loading .text { display: none; }
-        
-        .progress-container {
-            display: none;
-            margin-top: 20px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 12px;
-            padding: 15px;
-        }
-        .progress-bar {
-            width: 100%;
-            height: 6px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 3px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-        .progress-bar .fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            width: 0%;
-            border-radius: 3px;
-            transition: width 0.5s ease;
-        }
-        .progress-text { color: #a8a8d8; font-size: 0.9rem; text-align: center; }
         
         #status {
             margin-top: 15px;
@@ -565,11 +486,6 @@ def root():
             transform: translateY(-2px);
             box-shadow: 0 8px 30px rgba(0,206,201,0.5);
         }
-        #download-section .meta-info {
-            color: #8888aa;
-            font-size: 0.8rem;
-            margin-top: 10px;
-        }
         
         @media (max-width: 640px) {
             .container { padding: 20px; }
@@ -593,4 +509,68 @@ def root():
         </div>
         
         <div class="drop-zone" id="dropZone">
-            <div class="icon
+            <div class="icon">📤</div>
+            <div class="title">Drop your video here</div>
+            <div class="subtitle">MP4, MOV, AVI, MKV • Max 50MB</div>
+            <input type="file" id="fileInput" accept="video/*" style="display:none">
+        </div>
+        
+        <div class="file-info" id="fileInfo">
+            <span class="name" id="fileName">video.mp4</span>
+            <span class="size" id="fileSize">(12.5 MB)</span>
+            <span class="remove" id="removeFile">✕</span>
+        </div>
+        
+        <div class="settings">
+            <div class="settings-grid">
+                <div class="settings-group">
+                    <label>🎯 Source Language</label>
+                    <select id="sourceLang">
+                        <option value="auto">🔍 Auto Detect</option>
+                        <option value="english">🇬🇧 English</option>
+                        <option value="chinese">🇨🇳 Chinese</option>
+                        <option value="japanese">🇯🇵 Japanese</option>
+                        <option value="korean">🇰🇷 Korean</option>
+                        <option value="thai">🇹🇭 Thai</option>
+                        <option value="vietnamese">🇻🇳 Vietnamese</option>
+                    </select>
+                </div>
+                <div class="settings-group">
+                    <label>🌏 Target Language</label>
+                    <select id="targetLang">
+                        <option value="myanmar">🇲🇲 Myanmar</option>
+                        <option value="english">🇬🇧 English</option>
+                    </select>
+                </div>
+            </div>
+            <div class="settings-group" style="margin-top:12px;">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="translateCheck" checked>
+                    🔄 Translate to target language
+                </label>
+            </div>
+        </div>
+        
+        <button class="btn-generate" id="generateBtn">
+            <span class="text">⚡ Generate Subtitles</span>
+            <div class="spinner"></div>
+        </button>
+        
+        <div id="status"></div>
+        
+        <div id="download-section">
+            <a class="btn-download" id="downloadLink" download="subtitles.srt">📥 Download SRT File</a>
+        </div>
+    </div>
+    
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const removeFile = document.getElementById('removeFile');
+        const generateBtn = document.getElementById('generateBtn');
+        const status = document.getElementById('status');
+        const downloadSection = document.getElementById('download-section');
+        const downloadLink = document.getElemen
