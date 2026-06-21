@@ -1,7 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 import whisper
 import os
 import tempfile
@@ -10,6 +9,7 @@ import re
 import uuid
 from datetime import datetime
 from transformers import MarianMTModel, MarianTokenizer
+import json
 
 app = FastAPI(title="AI Subtitle Generator", version="2.0.0")
 
@@ -37,8 +37,9 @@ print("✅ Whisper model loaded!")
 
 print("📥 Loading translation model (English → Myanmar)...")
 try:
-    translation_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-my")
-    translation_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-en-my")
+    # FIX: Use correct model name (en-mn not en-my)
+    translation_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-mn")
+    translation_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-en-mn")
     print("✅ Translation model loaded!")
     translation_available = True
 except Exception as e:
@@ -47,6 +48,7 @@ except Exception as e:
 
 # ================= 2. EXTRACT AUDIO =================
 def extract_audio(video_path):
+    """Extract audio from video using ffmpeg"""
     audio_path = os.path.join(tempfile.gettempdir(), f"{uuid.uuid4()}.wav")
     cmd = [
         "ffmpeg", "-i", video_path, 
@@ -59,6 +61,7 @@ def extract_audio(video_path):
 
 # ================= 3. LANGUAGE DETECTION =================
 def detect_language(text):
+    """Detect language from text sample"""
     patterns = {
         'english': r'[a-zA-Z]',
         'chinese': r'[\u4e00-\u9fff]',
@@ -81,6 +84,7 @@ def detect_language(text):
 
 # ================= 4. TRANSLATION FUNCTION =================
 def translate_to_myanmar(text):
+    """Translate English text to Myanmar"""
     if not translation_available:
         return text
     
@@ -99,7 +103,7 @@ def translate_to_myanmar(text):
             outputs = translation_model.generate(
                 **inputs, 
                 max_length=512, 
-                num_beams=4,
+                num_beams=5,
                 early_stopping=True,
                 temperature=0.7
             )
@@ -114,6 +118,7 @@ def translate_to_myanmar(text):
 
 # ================= 5. MYANMAR GRAMMAR CLEANUP =================
 def cleanup_myanmar_grammar(text):
+    """Clean up Myanmar text for better readability"""
     text = re.sub(r'\s+', ' ', text)
     
     replacements = {
@@ -171,13 +176,15 @@ async def transcribe(
                 "japanese": "ja",
                 "korean": "ko",
                 "thai": "th",
-                "vietnamese": "vi"
+                "vietnamese": "vi",
+                "myanmar": "my"
             }
             lang_code = lang_map.get(source_language, None)
             result = model.transcribe(audio_path, language=lang_code, verbose=False)
         
         print("📝 Step 4: Generating subtitles...")
         srt = ""
+        original_srt = ""
         translated_count = 0
         detected_lang = "english"
         
@@ -190,6 +197,8 @@ async def transcribe(
             original_text = re.sub(r"\s+", " ", seg["text"].strip())
             if len(original_text) < 2:
                 continue
+            
+            original_srt += f"{i}\n{format_time(seg['start'])} --> {format_time(seg['end'])}\n{original_text}\n\n"
             
             if translate == "true" and translation_available and target_language == "myanmar":
                 try:
@@ -212,10 +221,15 @@ async def transcribe(
         with open(srt_path, "w", encoding="utf-8") as f:
             f.write(srt)
         
+        original_filename = f"{video_id}_original.srt"
+        original_path = os.path.join("outputs", original_filename)
+        with open(original_path, "w", encoding="utf-8") as f:
+            f.write(original_srt)
+        
         os.remove(video_path)
         os.remove(audio_path)
         
-        print(f"✅ Complete! Translated {translated_count} segments")
+        print(f"✅ Complete! Translated {translated_count} segments to Myanmar")
         
         return FileResponse(
             srt_path,
@@ -233,26 +247,334 @@ async def transcribe(
         print(f"❌ Error: {e}")
         return {"error": str(e)}
 
-# ================= 8. SERVE STATIC FILES =================
+# ================= 8. API ENDPOINT FOR STATUS =================
+@app.get("/api/status")
+def status():
+    return {
+        "status": "online",
+        "version": "2.0.0",
+        "translation_available": translation_available,
+        "models": {
+            "whisper": "tiny",
+            "translation": "Helsinki-NLP/opus-mt-en-mn" if translation_available else "not loaded"
+        }
+    }
+
+# ================= 9. WEB UI =================
 @app.get("/")
-async def root():
-    # Read the HTML file
-    with open("index.html", "r", encoding="utf-8") as f:
-        html_content = f.read()
-    return HTMLResponse(html_content)
-
-# ================= 9. SERVE CSS AND JS =================
-@app.get("/style.css")
-async def serve_css():
-    with open("style.css", "r", encoding="utf-8") as f:
-        return HTMLResponse(f.read(), media_type="text/css")
-
-@app.get("/script.js")
-async def serve_js():
-    with open("script.js", "r", encoding="utf-8") as f:
-        return HTMLResponse(f.read(), media_type="application/javascript")
-
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8080))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+def root():
+    return HTMLResponse("""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Subtitle Generator - Professional</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 750px;
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header p { color: #a8a8d8; font-size: 1rem; }
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        .badge {
+            background: rgba(102,126,234,0.15);
+            color: #a8a8d8;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            border: 1px solid rgba(102,126,234,0.2);
+        }
+        .badge.highlight {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+        }
+        .badge.myanmar {
+            background: rgba(0,206,201,0.15);
+            border-color: rgba(0,206,201,0.3);
+            color: #00cec9;
+        }
+        .drop-zone {
+            border: 2px dashed rgba(255,255,255,0.15);
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.03);
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: #667eea;
+            background: rgba(102,126,234,0.08);
+            transform: translateY(-2px);
+        }
+        .drop-zone .icon { font-size: 3rem; margin-bottom: 8px; }
+        .drop-zone .title { color: #e0e0e0; font-size: 1.1rem; font-weight: 500; }
+        .drop-zone .subtitle { color: #8888aa; font-size: 0.85rem; margin-top: 4px; }
+        .file-info {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(102,126,234,0.1);
+            border-radius: 12px;
+            border: 1px solid rgba(102,126,234,0.2);
+        }
+        .file-info .name { color: #e0e0e0; font-weight: 500; }
+        .file-info .size { color: #8888aa; font-size: 0.9rem; margin-left: 10px; }
+        .file-info .remove {
+            float: right;
+            color: #ff6b6b;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .file-info .remove:hover { color: #ff4757; }
+        
+        .settings {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .settings-group label {
+            color: #a8a8d8;
+            display: block;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+        .settings-group select, .settings-group input[type="checkbox"] {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .settings-group select option {
+            background: #1a1a2e;
+            color: #e0e0e0;
+        }
+        .settings-group .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #a8a8d8;
+            cursor: pointer;
+        }
+        .settings-group .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #667eea;
+            cursor: pointer;
+        }
+        
+        .btn-generate {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(102,126,234,0.3);
+            margin-top: 20px;
+            display: none;
+        }
+        .btn-generate:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(102,126,234,0.5);
+        }
+        .btn-generate:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        .btn-generate .spinner {
+            display: none;
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s ease-in-out infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-generate.loading .spinner { display: block; }
+        .btn-generate.loading .text { display: none; }
+        
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        .progress-text { color: #a8a8d8; font-size: 0.9rem; text-align: center; }
+        
+        #status {
+            margin-top: 15px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            text-align: center;
+            display: none;
+        }
+        #status.success {
+            display: block;
+            background: rgba(0,206,201,0.1);
+            border: 1px solid rgba(0,206,201,0.2);
+            color: #00cec9;
+        }
+        #status.error {
+            display: block;
+            background: rgba(255,107,107,0.1);
+            border: 1px solid rgba(255,107,107,0.2);
+            color: #ff6b6b;
+        }
+        #status.info {
+            display: block;
+            background: rgba(102,126,234,0.1);
+            border: 1px solid rgba(102,126,234,0.2);
+            color: #a8a8d8;
+        }
+        
+        #download-section {
+            display: none;
+            margin-top: 20px;
+            text-align: center;
+        }
+        #download-section .btn-download {
+            display: inline-block;
+            padding: 14px 40px;
+            background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,206,201,0.3);
+        }
+        #download-section .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,206,201,0.5);
+        }
+        #download-section .meta-info {
+            color: #8888aa;
+            font-size: 0.8rem;
+            margin-top: 10px;
+        }
+        
+        @media (max-width: 640px) {
+            .container { padding: 20px; }
+            .header h1 { font-size: 1.8rem; }
+            .settings-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 AI Subtitle Generator</h1>
+            <p>Transcribe & Translate to Myanmar 🇲🇲</p>
+            <div class="badges">
+                <span class="badge highlight">⚡ Pro</span>
+                <span class="badge myanmar">🇲🇲 Myanmar</span>
+                <span class="badge">🎯 Auto-Detect</span>
+                <span class="badge">🌍 7 Languages</span>
+                <span class="badge">📥 SRT</span>
+            </div>
+        </div>
+        
+        <div class="drop-zone" id="dropZone">
+            <div class="icon">📤</div>
+            <div class="title">Drop your video here</div>
+            <div class="subtitle">MP4, MOV, AVI, MKV • Max 50MB</div>
+            <input type="file" id="fileInput" accept="video/*" style="display:none">
+        </div>
+        
+        <div class="file-info" id="fileInfo">
+            <span class="name" id="fileName">video.mp4</span>
+            <span class="size" id="fileSize">(12.5 MB)</span>
+            <span class="remove" id="removeFile">✕</span>
+        </div>
+        
+        <div class="settings">
+            <div class="settings-grid">
+                <div class="settings-group">
+                    <label>🎯 Source Language</label>
+                    <select id="sourceLang">
+                        <option value="auto">🔍 Auto Detect</option>
+                        <option value="english">🇬🇧 English</option>
+                        <option value="chinese">🇨🇳 Chinese</option>
+                        <option value="japanese">🇯🇵 Japanese</option>
+                        <option value="korean">🇰🇷 Korean</option>
+                        <option value="thai">🇹🇭 Thai</option>
+                        <option value="vietnamese">🇻🇳 Vietnamese</option>
+                    </select>
+                </div>
+                <div class="settings-group">
+                    <label>🌏 Target Language</label>
+                    <select id="targetLang">
+                        <option value="myanmar">🇲🇲 Myanmar</option>
+                        <option value="english">🇬🇧 English</option>
+                    </select>
+                </div>
+            </div>
+            <div class="settings-group" style="margin-top:12px;">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="translateCheck" checked>
+      
