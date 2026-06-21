@@ -4,43 +4,12 @@ import tempfile
 import os
 import re
 import subprocess
-import torch
-from transformers import MarianMTModel, MarianTokenizer
+from googletrans import Translator
 
-# ================= MODEL LOADING =================
+# ================= LOAD MODELS =================
 print("📥 Loading Whisper model...")
-
-# FIX: Use "base" or "small" for better Asian language support
-# "tiny" doesn't work well with Asian languages!
-model = whisper.load_model("base")  # Change to "base" or "small"
-
-# ================= TRANSLATION MODELS =================
-# FIX: Added models for Asian languages → Myanmar
-translation_models = {
-    "English → Myanmar": "Helsinki-NLP/opus-mt-en-my",
-    "Thai → Myanmar": "Helsinki-NLP/opus-mt-th-my",      # Thai to Myanmar
-    "Vietnamese → Myanmar": "Helsinki-NLP/opus-mt-vi-my", # Vietnamese to Myanmar
-    "Myanmar → English": "Helsinki-NLP/opus-mt-my-en",
-    "Thai → English": "Helsinki-NLP/opus-mt-th-en",
-    "Vietnamese → English": "Helsinki-NLP/opus-mt-vi-en",
-}
-
-loaded_tokenizer = None
-loaded_mt_model = None
-current_model_name = None
-
-def load_translation_model(model_path):
-    global loaded_tokenizer, loaded_mt_model, current_model_name
-    if current_model_name == model_path: return True
-    try:
-        print(f"📥 Loading translation model: {model_path}")
-        loaded_tokenizer = MarianTokenizer.from_pretrained(model_path)
-        loaded_mt_model = MarianMTModel.from_pretrained(model_path)
-        current_model_name = model_path
-        return True
-    except Exception as e:
-        print(f"❌ Failed to load translation model: {e}")
-        return False
+model = whisper.load_model("base")  # Use "base" or "small" for better quality
+translator = Translator()
 
 # ================= FUNCTIONS =================
 def format_time(seconds):
@@ -58,49 +27,6 @@ def extract_audio_from_video(video_path, output_audio_path):
     except: 
         return False
 
-# FIX: Added direct translation function
-def detect_and_translate(text, source_lang, target_lang):
-    """Translate text from source_lang to target_lang"""
-    # Map UI languages to model keys
-    lang_map = {
-        "Auto Detect": None,
-        "English": "en",
-        "Myanmar": "my",
-        "Thai": "th",
-        "Vietnamese": "vi"
-    }
-    
-    # If source is English, translate to target
-    if source_lang == "English":
-        model_key = f"English → {target_lang}"
-    elif target_lang == "English":
-        model_key = f"{source_lang} → English"
-    else:
-        # For Asian → Asian, use English as bridge
-        # Load English → target model
-        if source_lang != "English":
-            model_key = f"English → {target_lang}"
-        else:
-            model_key = f"{source_lang} → English"
-    
-    # Load the appropriate model
-    if model_key not in translation_models:
-        print(f"⚠️ No direct translation model for {source_lang} → {target_lang}")
-        return text
-    
-    model_path = translation_models[model_key]
-    if not load_translation_model(model_path):
-        return text
-    
-    try:
-        inputs = loaded_tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
-        outputs = loaded_mt_model.generate(**inputs, max_length=512, num_beams=1)
-        translated = loaded_tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return translated
-    except Exception as e:
-        print(f"❌ Translation error: {e}")
-        return text
-
 def transcribe(video, source_language, target_language):
     if video is None: 
         return "❌ Video not found", None
@@ -109,72 +35,106 @@ def transcribe(video, source_language, target_language):
     if not extract_audio_from_video(str(video), audio_path): 
         return "❌ Audio extraction failed", None
     
-    # FIX: Handle language properly
-    if source_language == "Auto Detect":
-        language = None
-    else:
-        # Map UI language to Whisper language codes
-        lang_map = {"English": "en", "Myanmar": "my", "Thai": "th", "Vietnamese": "vi"}
-        language = lang_map.get(source_language, None)
+    # Language mapping for Whisper
+    lang_map = {
+        "Auto Detect": None,
+        "English": "en",
+        "Myanmar": "my",
+        "Thai": "th",
+        "Vietnamese": "vi",
+        "Japanese": "ja",
+        "Korean": "ko",
+        "Chinese": "zh"
+    }
+    
+    language = lang_map.get(source_language, None)
     
     print(f"🔍 Transcribing with language: {language}")
     result = model.transcribe(audio_path, language=language, verbose=False)
     
     srt = ""
-    translated_count = 0
+    
+    # Map target language for Google Translate
+    target_map = {
+        "Myanmar": "my",
+        "English": "en",
+        "Thai": "th",
+        "Vietnamese": "vi",
+        "Japanese": "ja",
+        "Korean": "ko",
+        "Chinese": "zh-cn"
+    }
+    
+    target_code = target_map.get(target_language, "en")
     
     for i, seg in enumerate(result["segments"], 1):
         original_text = re.sub(r"\s+", " ", seg["text"].strip())
         if len(original_text) < 2: 
             continue
         
-        # FIX: Translate to target language
-        if target_language != "Original":
-            translated_text = detect_and_translate(original_text, source_language, target_language)
-            translated_count += 1
-        else:
-            translated_text = original_text
+        # Translate using Google Translate
+        try:
+            if target_language != "Original":
+                translated = translator.translate(original_text, dest=target_code).text
+            else:
+                translated = original_text
+        except Exception as e:
+            print(f"Translation error: {e}")
+            translated = original_text
         
-        # FIX: Include both original and translation for clarity
-        srt += f"{i}\n{format_time(seg['start'])} --> {format_time(seg['end'])}\n{translated_text}\n\n"
-    
-    print(f"✅ Translated {translated_count} segments to {target_language}")
+        srt += f"{i}\n{format_time(seg['start'])} --> {format_time(seg['end'])}\n{translated}\n\n"
     
     srt_file = os.path.join(tempfile.gettempdir(), "subtitles.srt")
     with open(srt_file, "w", encoding="utf-8") as f: 
         f.write(srt)
     
-    return srt, srt_file
+    # Add preview with source and target info
+    preview = f"✅ Transcribed from: {source_language}\n✅ Translated to: {target_language}\n{'='*50}\n\n{srt}"
+    
+    return preview, srt_file
 
 # ================= UI =================
 demo = gr.Blocks(title="🎬 AI Subtitle Generator")
 
 with demo:
-    gr.HTML("<h1 style='text-align:center;'>🌏 AI Subtitle Generator</h1>")
-    gr.HTML("<p style='text-align:center;'>Transcribe any language and translate to Myanmar 🇲🇲</p>")
+    gr.HTML("""
+    <h1 style='text-align:center;'>🌏 AI Subtitle Generator</h1>
+    <p style='text-align:center;'>Transcribe any language and translate to your target language 🇲🇲</p>
+    """)
     
     with gr.Row():
-        with gr.Column():
-            video_input = gr.Video(label="Upload Video")
+        with gr.Column(scale=1):
+            video_input = gr.Video(label="📹 Upload Video")
             
-            # FIX: Better language options
             source_lang = gr.Dropdown(
-                ["Auto Detect", "English", "Myanmar", "Thai", "Vietnamese"], 
-                value="Auto Detect", 
-                label="Source Language"
+                choices=["Auto Detect", "English", "Myanmar", "Thai", "Vietnamese", "Japanese", "Korean", "Chinese"],
+                value="Auto Detect",
+                label="🎯 Source Language (What language is in the video?)"
             )
             
             target_lang = gr.Dropdown(
-                ["Myanmar", "English", "Thai", "Vietnamese"], 
-                value="Myanmar", 
-                label="Target Language"
+                choices=["Myanmar", "English", "Thai", "Vietnamese", "Japanese", "Korean", "Chinese"],
+                value="Myanmar",
+                label="🌏 Translate To (Target Language)"
             )
             
-            submit_btn = gr.Button("⚡ Generate Subtitles", variant="primary")
+            submit_btn = gr.Button("⚡ Generate Subtitles", variant="primary", size="lg")
             
-        with gr.Column():
-            sub_out = gr.Textbox(label="Subtitle Preview", lines=12)
-            file_out = gr.File(label="📥 Download SRT")
+            gr.HTML("""
+            <br>
+            <div style='background:#f0f0f0;padding:10px;border-radius:5px;'>
+                <p style='margin:0;font-size:12px;'>💡 <b>Tips:</b></p>
+                <ul style='font-size:12px;'>
+                    <li>Works best with clear audio</li>
+                    <li>Supports: English, Myanmar, Thai, Vietnamese, Japanese, Korean, Chinese</li>
+                    <li>Auto-detect works well for single language videos</li>
+                </ul>
+            </div>
+            """)
+            
+        with gr.Column(scale=1):
+            sub_out = gr.Textbox(label="📝 Subtitle Preview", lines=15)
+            file_out = gr.File(label="📥 Download SRT File")
     
     submit_btn.click(
         transcribe, 
