@@ -9,6 +9,7 @@ import re
 import uuid
 from datetime import datetime
 from transformers import MarianMTModel, MarianTokenizer
+from googletrans import Translator
 
 app = FastAPI(title="AI Subtitle Generator", version="2.0.0")
 
@@ -35,6 +36,19 @@ print("📥 Loading translation model (English → Myanmar)...")
 try:
     translation_tokenizer = MarianTokenizer.from_pretrained("Helsinki-NLP/opus-mt-en-mn")
     translation_model = MarianMTModel.from_pretrained("Helsinki-NLP/opus-mt-en-mn")
+    translator = Translator()
+    translation_available = True
+    
+def translate_to_myanmar(text):
+    if not translation_available:
+        return text
+    try:
+        result = translator.translate(text, dest='my')
+        return result.text
+    except Exception as e:
+        print(f"Translation error: {e}")
+        return text  
+        
     print("✅ Translation model loaded!")
     translation_available = True
 except Exception as e:
