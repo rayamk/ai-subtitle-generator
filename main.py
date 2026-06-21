@@ -39,4 +39,12 @@ except Exception as e:
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     print(f"🚀 Starting server on port {port}...")
-    demo.launch(server_name="0.0.0.0", server_port=port)
+    
+    # IMPORTANT: Use these settings for Railway
+    demo.launch(
+        server_name="0.0.0.0",
+        server_port=port,
+        share=False,  # Don't use share=True on Railway
+        auth=None,
+        debug=False
+    )
