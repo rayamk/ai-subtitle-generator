@@ -1,17 +1,22 @@
-// Colab URL 
+// 🔥 သင့် Colab URL ကို ဒီမှာထည့်ပါ (အဆုံးတွင် / မထည့်ပါနှင့်)
 const BACKEND_URL = 'https://5000-m-s-kkb-use1c0-3nq7f7l5l8mn9-c.us-east1-0.prod.colab.dev';
+
+console.log('Script loaded successfully');
 
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('uploadForm');
     const status = document.getElementById('status');
     const downloadLink = document.getElementById('downloadLink');
+    const fileInput = document.getElementById('videoFile');
     
-    if (!form) return;
+    if (!form) {
+        console.error('❌ Form not found!');
+        return;
+    }
     
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        const fileInput = document.getElementById('videoFile');
         const file = fileInput.files[0];
         
         if (!file) {
@@ -26,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('file', file);
         
         try {
+            // URL ကို သေချာစေရန် `${BACKEND_URL}/upload` ဟု သုံးပါ
             const response = await fetch(`${BACKEND_URL}/upload`, {
                 method: 'POST',
                 body: formData
@@ -34,6 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 const blob = await response.blob();
                 const url = URL.createObjectURL(blob);
+                
                 downloadLink.href = url;
                 downloadLink.download = 'myanmar_subtitles.srt';
                 downloadLink.style.display = 'block';
@@ -41,9 +48,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 status.textContent = '✅ ပြီးပါပြီ။';
             } else {
                 status.textContent = '❌ Error: ' + response.status;
+                console.error('Server error:', await response.text());
             }
         } catch (error) {
-            status.textContent = '❌ Server နှင့် ချိတ်ဆက်လို့မရပါ။';
+            status.textContent = '❌ Server နဲ့ ချိတ်ဆက်လို့မရပါ။ (Colab Run ထားရဲ့လား စစ်ဆေးပါ)';
             console.error('Fetch error:', error);
         }
     });
