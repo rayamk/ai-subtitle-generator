@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, Form
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import whisper
 import os
@@ -90,6 +90,30 @@ def format_time(seconds):
     h = int(seconds // 3600)
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
+@app.get("/")
+def root():
+    return {
+        "message": "🎬 AI Subtitle Generator v2.0.0",
+        "status": "online",
+        "endpoints": {
+            "/api/status": "Check service status",
+            "/api/transcribe": "Upload video & generate subtitles",
+            "/docs": "Swagger API Documentation"
+        }
+    }
+
+@app.get("/api/status")
+def status():
+    return {
+        "status": "online",
+        "version": "2.0.0",
+        "translation_available": translation_available,
+        "models": {
+            "whisper": "tiny",
+            "translation": "Google Translate"
+        }
+    }
+
 @app.post("/api/transcribe")
 async def transcribe(
     video: UploadFile = File(...),
@@ -173,24 +197,6 @@ async def transcribe(
     except Exception as e:
         print(f"❌ Error: {e}")
         return {"error": str(e)}
-
-@app.get("/api/status")
-def status():
-    return {
-        "status": "online",
-        "version": "2.0.0",
-        "translation_available": translation_available,
-        "models": {
-            "whisper": "tiny",
-            "translation": "Google Translate"
-        }
-    }
-
-@app.get("/")
-def root():
-    with open("index.html", "r", encoding="utf-8") as f:
-        html_content = f.read()
-    return HTMLResponse(html_content)
 
 if __name__ == "__main__":
     import uvicorn
