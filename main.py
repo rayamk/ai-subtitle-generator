@@ -57,8 +57,11 @@ def transcribe(video, language_code, target_language):
     
     audio_path = os.path.join(tempfile.gettempdir(), "temp_audio.wav")
     if not extract_audio_from_video(str(video), audio_path): return "❌ Audio extraction failed", None
-        
-    result = model.transcribe(audio_path, language=language_code if language_code != "Auto" else None, verbose=False)
+    
+    # FIX: Handle "Auto Detect" properly - Whisper expects None for auto detection
+    language = None if language_code == "Auto Detect" else language_code
+    
+    result = model.transcribe(audio_path, language=language, verbose=False)
     
     srt = ""
     for i, seg in enumerate(result["segments"], 1):
@@ -79,13 +82,16 @@ def transcribe(video, language_code, target_language):
     return srt, srt_file
 
 # ================= UI =================
-with gr.Blocks(title="🎬 AI Subtitle Myanmar", theme=gr.themes.Soft(primary_hue="indigo")) as demo:
+# FIX: Remove theme from Blocks constructor (Gradio 6.0+)
+demo = gr.Blocks(title="🎬 AI Subtitle Myanmar")
+
+with demo:
     gr.HTML("<h1 style='text-align:center;'>🌏 AI Subtitle Generator</h1>")
     with gr.Row():
         with gr.Column():
             video_input = gr.Video(label="Upload Video")
-            lang_in = gr.Dropdown(["Auto Detect", "English", "Tiếng Việt", "ไทย"], value="Auto Detect", label="Source")
-            lang_out = gr.Dropdown(list(translation_models.keys()), value="English → Myanmar", label="Target")
+            lang_in = gr.Dropdown(["Auto Detect", "English", "Tiếng Việt", "ไทย"], value="Auto Detect", label="Source Language")
+            lang_out = gr.Dropdown(list(translation_models.keys()), value="English → Myanmar", label="Target Language")
             submit_btn = gr.Button("⚡ Generate Subtitles", variant="primary")
         with gr.Column():
             sub_out = gr.Textbox(label="Subtitle Preview", lines=12)
@@ -95,5 +101,5 @@ with gr.Blocks(title="🎬 AI Subtitle Myanmar", theme=gr.themes.Soft(primary_hu
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
-    demo.launch(server_name="0.0.0.0", server_port=port)
-        
+    # FIX: Move theme to launch() method
+    demo.launch(server_name="0.0.0.0", server_port=port, theme=gr.themes.Soft(primary_hue="indigo"))
