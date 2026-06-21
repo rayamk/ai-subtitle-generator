@@ -25,7 +25,7 @@ translation_models = {
     "Myanmar → English": "Helsinki-NLP/opus-mt-my-en",
     "Thai → English": "Helsinki-NLP/opus-mt-th-en",
     "Vietnamese → English": "Helsinki-NLP/opus-mt-vi-en",
-    "Chinese → English": "Helsinki-NLP/opus-mt-zh-en",  # Added Chinese → English
+    "Chinese → English": "Helsinki-NLP/opus-mt-zh-en",
 }
 
 loaded_tokenizer = None
@@ -46,7 +46,6 @@ def load_translation_model(model_path):
         print(f"❌ Failed to load translation model: {e}")
         return False
 
-# ================= FUNCTIONS =================
 def format_time(seconds):
     ms = int((seconds % 1) * 1000)
     s = int(seconds) % 60
@@ -125,15 +124,12 @@ def transcribe(video, source_language, target_language):
     # Check if we need to use bridge translation
     if source_language != "Auto Detect" and source_language != target_language:
         if direct_key in translation_models:
-            # Direct translation exists
             load_translation_model(translation_models[direct_key])
             print(f"✅ Using direct translation: {source_language} → {target_language}")
         elif reverse_key in translation_models:
-            # Reverse translation exists (will translate in reverse)
             load_translation_model(translation_models[reverse_key])
             print(f"✅ Using reverse translation: {reverse_key}")
         elif source_language in ["Chinese", "Japanese", "Korean"] and target_language in ["Myanmar", "Thai", "Vietnamese"]:
-            # Use bridge translation via English for Asian → Asian
             bridge_used = True
             print(f"🔄 Using English as bridge: {source_language} → English → {target_language}")
         else:
@@ -149,10 +145,8 @@ def transcribe(video, source_language, target_language):
         if source_language != "Auto Detect" and source_language != target_language:
             try:
                 if bridge_used:
-                    # Use bridge translation for Chinese → Myanmar
                     translated_text = translate_with_bridge(original_text, source_language, target_language)
                 elif loaded_tokenizer and loaded_mt_model:
-                    # Direct translation
                     inputs = loaded_tokenizer(original_text, return_tensors="pt", truncation=True, max_length=512)
                     outputs = loaded_mt_model.generate(**inputs, max_length=512, num_beams=1)
                     translated_text = loaded_tokenizer.decode(outputs[0], skip_special_tokens=True)
@@ -181,195 +175,52 @@ def transcribe(video, source_language, target_language):
     
     return preview, srt_file
 
-# ================= PROFESSIONAL UI =================
-custom_css = """
-<style>
-    .gradio-container {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    }
-    
-    .gr-box {
-        background: white !important;
-        border-radius: 16px !important;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.08) !important;
-        padding: 20px !important;
-        border: none !important;
-    }
-    
-    h1 {
-        color: #1a1a2e !important;
-        font-weight: 700 !important;
-        font-size: 2.5rem !important;
-        margin-bottom: 0.5rem !important;
-        letter-spacing: -0.5px !important;
-    }
-    
-    .subtitle {
-        color: #4a4a6a !important;
-        font-size: 1.1rem !important;
-        font-weight: 400 !important;
-        margin-top: -0.5rem !important;
-        opacity: 0.8 !important;
-    }
-    
-    .gr-button-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        border: none !important;
-        border-radius: 12px !important;
-        padding: 14px 32px !important;
-        font-weight: 600 !important;
-        font-size: 1.1rem !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4) !important;
-        color: white !important;
-    }
-    
-    .gr-button-primary:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5) !important;
-    }
-    
-    .gr-dropdown {
-        border-radius: 10px !important;
-        border: 2px solid #e8ecf1 !important;
-        transition: all 0.3s ease !important;
-    }
-    
-    .gr-dropdown:focus {
-        border-color: #667eea !important;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
-    }
-    
-    .gr-textbox {
-        border-radius: 12px !important;
-        border: 2px solid #e8ecf1 !important;
-        font-family: 'Consolas', monospace !important;
-        font-size: 14px !important;
-        line-height: 1.6 !important;
-    }
-    
-    .badge {
-        display: inline-block;
-        background: rgba(102, 126, 234, 0.1);
-        color: #667eea;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        margin-right: 4px;
-    }
-</style>
-"""
+# ================= UI - FIXED FOR GRADIO 6.0 =================
 
-# ================= UI =================
-with gr.Blocks(title="🎬 AI Subtitle Generator", theme=gr.themes.Soft()) as demo:
-    gr.HTML(custom_css)
-    
-    gr.HTML("""
-    <div style='text-align: center; padding: 20px 0 10px 0;'>
-        <h1>🎬 AI Subtitle Generator</h1>
-        <p class='subtitle'>Professional Transcription & Translation Powered by AI</p>
-        <div style='display: flex; justify-content: center; gap: 10px; margin-top: 10px; flex-wrap: wrap;'>
-            <span class='badge'>🎯 Whisper AI</span>
-            <span class='badge'>🌍 8+ Languages</span>
-            <span class='badge'>⚡ Real-time</span>
-            <span class='badge'>🔄 Bridge Translation</span>
-        </div>
-    </div>
+# FIX 1: Remove theme from Blocks constructor
+demo = gr.Blocks(title="🎬 AI Subtitle Generator")
+
+with demo:
+    gr.Markdown("""
+    # 🎬 AI Subtitle Generator
+    ### Professional Transcription & Translation Powered by AI
+    **Supported Languages:** English, Myanmar, Thai, Vietnamese, Chinese, Japanese, Korean
     """)
     
-    with gr.Row(equal_height=True):
-        with gr.Column(scale=1, min_width=400):
-            with gr.Group():
-                gr.Markdown("### 📤 Upload Media")
-                video_input = gr.Video(
-                    label="",
-                    height=300,
-                    show_label=False
+    with gr.Row():
+        with gr.Column(scale=1):
+            video_input = gr.Video(label="📹 Upload Video", height=300)
+            
+            with gr.Row():
+                source_lang = gr.Dropdown(
+                    choices=["Auto Detect", "English", "Myanmar", "Thai", "Vietnamese", "Chinese", "Japanese", "Korean"],
+                    value="Auto Detect",
+                    label="🎯 Source Language"
+                )
+                target_lang = gr.Dropdown(
+                    choices=["English", "Myanmar", "Thai", "Vietnamese", "Chinese", "Japanese", "Korean"],
+                    value="Myanmar",
+                    label="🌏 Target Language"
                 )
             
-            with gr.Group():
-                gr.Markdown("### ⚙️ Language Settings")
-                
-                with gr.Row():
-                    with gr.Column():
-                        source_lang = gr.Dropdown(
-                            choices=["Auto Detect", "English", "Myanmar", "Thai", "Vietnamese", "Chinese", "Japanese", "Korean"],
-                            value="Auto Detect",
-                            label="🎯 Source Language",
-                            info="What language is spoken in the video?"
-                        )
-                    
-                    with gr.Column():
-                        target_lang = gr.Dropdown(
-                            choices=["English", "Myanmar", "Thai", "Vietnamese", "Chinese", "Japanese", "Korean"],
-                            value="Myanmar",
-                            label="🌏 Target Language",
-                            info="What language to translate to?"
-                        )
+            # FIX 2: Remove 'full_width' parameter - use variant only
+            submit_btn = gr.Button("⚡ Generate Subtitles", variant="primary")
             
-            submit_btn = gr.Button(
-                "⚡ Generate Subtitles",
-                variant="primary",
-                size="lg",
-                full_width=True
-            )
-            
-            gr.HTML("""
-            <div style='background: #f8f9fc; padding: 16px; border-radius: 12px; margin-top: 10px; border-left: 4px solid #667eea;'>
-                <p style='margin: 0; font-size: 0.9rem; color: #4a4a6a;'>
-                    <strong>💡 Supported Translations:</strong><br>
-                    ✅ English ↔ Myanmar, Thai, Vietnamese, Chinese, Japanese, Korean<br>
-                    ✅ Chinese → Myanmar (via English bridge)<br>
-                    ✅ Japanese → Myanmar (via English bridge)<br>
-                    ✅ Korean → Myanmar (via English bridge)
-                </p>
-                <p style='margin: 8px 0 0 0; font-size: 0.8rem; color: #8a8aaa;'>
-                    ⏱️ Processing time depends on video length and model size
-                </p>
-            </div>
-            """)
-        
-        with gr.Column(scale=1, min_width=400):
-            with gr.Group():
-                gr.Markdown("### 📝 Subtitle Preview")
-                sub_out = gr.Textbox(
-                    label="",
-                    lines=15,
-                    show_label=False,
-                    placeholder="Your subtitles will appear here..."
-                )
-            
-            with gr.Group():
-                gr.Markdown("### 💾 Export")
-                file_out = gr.File(
-                    label="",
-                    show_label=False,
-                    file_types=[".srt"]
-                )
-                
-                gr.HTML("""
-                <div style='display: flex; gap: 20px; margin-top: 10px;'>
-                    <div style='flex: 1; text-align: center; padding: 10px; background: #f8f9fc; border-radius: 8px;'>
-                        <span style='font-size: 0.8rem; color: #8a8aaa;'>Status</span>
-                        <p style='margin: 0; font-weight: 600; color: #4a4a6a;'>Ready</p>
-                    </div>
-                    <div style='flex: 1; text-align: center; padding: 10px; background: #f8f9fc; border-radius: 8px;'>
-                        <span style='font-size: 0.8rem; color: #8a8aaa;'>Format</span>
-                        <p style='margin: 0; font-weight: 600; color: #4a4a6a;'>SRT</p>
-                    </div>
-                </div>
-                """)
+        with gr.Column(scale=1):
+            sub_out = gr.Textbox(label="📝 Subtitle Preview", lines=15)
+            file_out = gr.File(label="📥 Download SRT")
+    
+    submit_btn.click(
+        transcribe, 
+        inputs=[video_input, source_lang, target_lang], 
+        outputs=[sub_out, file_out]
+    )
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
+    # FIX 3: Move theme to launch() method
     demo.launch(
-        server_name="0.0.0.0",
+        server_name="0.0.0.0", 
         server_port=port,
-        theme=gr.themes.Soft(
-            primary_hue="indigo",
-            secondary_hue="purple",
-            font=gr.themes.GoogleFont("Inter")
-        ),
-        show_api=False
-            )
+        theme=gr.themes.Soft(primary_hue="indigo")
+)
