@@ -1,5 +1,5 @@
-// Colab URL ကို ထည့်ပါ (အဆုံးမှာ / မပါပါစေနဲ့)
-const BACKEND_URL = 'https://5000-xxxx-xxxx-xxxx-xxxx.xxxx.colab.dev';
+// Colab URL ကို အောက်ပါအတိုင်း ထည့်ပါ
+const BACKEND_URL = 'https://5000-m-s-kkb-use1c0-3nq7f7l5l8mn9-c.us-east1-0.prod.colab.dev';
 
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('uploadForm');
@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const downloadLink = document.getElementById('downloadLink');
     
     if (!form) {
-        console.error('Form element #uploadForm မတွေ့ပါ');
+        console.error('Form not found!');
         return;
     }
     
@@ -15,21 +15,21 @@ document.addEventListener('DOMContentLoaded', function() {
         e.preventDefault();
         
         const fileInput = document.getElementById('videoFile');
-        const file = fileInput ? fileInput.files[0] : null;
+        const file = fileInput.files[0];
         
         if (!file) {
-            status.textContent = '❌ ကျေးဇူးပြု၍ ဗီဒီယိုဖိုင်ကို အရင်ရွေးချယ်ပေးပါ။';
+            status.textContent = '❌ ဗီဒီယိုဖိုင် ရွေးပေးပါ။';
             return;
         }
         
-        status.textContent = '⏳ လုပ်ဆောင်နေပါသည်... (ခဏစောင့်ပေးပါ)';
+        status.textContent = '⏳ လုပ်ဆောင်နေပါသည်...';
         downloadLink.style.display = 'none';
         
         const formData = new FormData();
         formData.append('file', file);
         
         try {
-            // URL ကို မှန်ကန်စွာ ပေါင်းစပ်ခြင်း
+            // URL နှင့် path ကို ပေါင်းစပ်ထားသည်
             const response = await fetch(`${BACKEND_URL}/upload`, {
                 method: 'POST',
                 body: formData
@@ -38,18 +38,16 @@ document.addEventListener('DOMContentLoaded', function() {
             if (response.ok) {
                 const blob = await response.blob();
                 const url = URL.createObjectURL(blob);
-                
                 downloadLink.href = url;
                 downloadLink.download = 'myanmar_subtitles.srt';
                 downloadLink.style.display = 'block';
-                downloadLink.textContent = '📥 မြန်မာ SRT ဖိုင်ကို ရယူရန် နှိပ်ပါ';
-                status.textContent = '✅ အောင်မြင်စွာ လုပ်ဆောင်ပြီးပါပြီ။';
+                downloadLink.textContent = '📥 မြန်မာ SRT ကို Download လုပ်ပါ';
+                status.textContent = '✅ ပြီးပါပြီ။';
             } else {
-                const errorText = await response.text();
-                status.textContent = `❌ Error: ${response.status} - ${errorText}`;
+                status.textContent = '❌ Error: ' + response.status;
             }
         } catch (error) {
-            status.textContent = '❌ Server နှင့် ချိတ်ဆက်၍ မရပါ။ Colab အလုပ်လုပ်နေရဲ့လား စစ်ဆေးပေးပါ။';
+            status.textContent = '❌ Server နှင့် ချိတ်ဆက်လို့မရပါ။';
             console.error('Fetch error:', error);
         }
     });
