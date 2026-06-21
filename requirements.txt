@@ -1,5 +1,5 @@
-fastapi
-uvicorn
+gradio
 openai-whisper
+transformers
+torch
 python-multipart
-
