@@ -1,6 +1,5 @@
-flask
-flask-cors
+fastapi
+uvicorn
 openai-whisper
-moviepy
-gunicorn
+python-multipart
 
