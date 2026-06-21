@@ -45,7 +45,7 @@ def translate_to_myanmar(text):
     try:
         result = translator.translate(text, dest='my')
         return result.text
-    except Exception as e:
+except Exception as e:
         print(f"Translation error: {e}")
         return text  
         
