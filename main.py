@@ -198,9 +198,5 @@ async def transcribe(
         print(f"❌ Error: {e}")
         return {"error": str(e)}
 
-# Railway Deployment Fix
-import uvicorn
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+# Uvicorn ကို nixpacks.toml ကနေ Run မှာဖြစ်တယ်
+# ဒါကြောင့် ဒီမှာ uvicorn.run() မထည့်ပါနဲ့
