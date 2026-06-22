@@ -5,7 +5,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # System dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recloscommends \
     ffmpeg \
     build-essential \
     g++ \
@@ -31,9 +31,9 @@ RUN pip install --no-cache-dir setuptools==69.5.1 && \
 # Application code များကူးခြင်း
 COPY . .
 
-# Port
-EXPOSE 8080
+# Hugging Face အတွက် Port 7860 ကို သတ်မှတ်ခြင်း
+EXPOSE 7860
 
-# Run
+# Run (main.py ထဲတွင် port ကို 7860 ဟု သတ်မှတ်ထားရန် လိုအပ်ပါသည်)
 CMD ["python", "main.py"]
 
