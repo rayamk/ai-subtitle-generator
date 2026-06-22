@@ -306,8 +306,11 @@ def health():
         "status": "healthy",
         "timestamp": datetime.now().isoformat()
     }
+    
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("PORT", 8080))
+    # Hugging Face Spaces အတွက် port 7860 ကို သတ်မှတ်ခြင်း
+    port = int(os.environ.get("PORT", 7860))
     uvicorn.run(app, host="0.0.0.0", port=port)
+    
