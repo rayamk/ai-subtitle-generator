@@ -1,27 +1,30 @@
-# Python 3.11 Slim version ကို အသုံးပြုခြင်း
+# Python 3.11 Slim version
 FROM python:3.11-slim
 
-# Working directory သတ်မှတ်ခြင်း
+# Working directory
 WORKDIR /app
 
-# System dependencies များသွင်းခြင်း (ffmpeg သည် whisper အတွက် မရှိမဖြစ်လိုအပ်သည်)
+# System dependencies (ffmpeg + build tools)
 RUN apt-get update && apt-get install -y \
     ffmpeg \
+    build-essential \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Dependency များကို Copy ကူးပြီး သွင်းခြင်း
-# setuptools ကို အရင်သွင်းခြင်းဖြင့် build error ကို ကာကွယ်ပေးသည်
+# Dependency များသွင်းခြင်း
 COPY requirements.txt .
+
+# PyTorch ကို CPU version အနေနဲ့ သီးသန့်သွင်းပြီးမှ ကျန်တာသွင်းပါ
 RUN pip install --upgrade pip \
-    && pip install setuptools \
+    && pip install setuptools wheel \
+    && pip install torch==2.1.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cpu \
     && pip install --no-cache-dir -r requirements.txt
 
-# Application code များအားလုံးကို Copy ကူးခြင်း
-# . ကို သုံးခြင်းဖြင့် app folder ထဲရှိဖိုင်အားလုံးပါသွားမည်
+# Application code များကူးခြင်း
 COPY . .
 
-# Port သတ်မှတ်ခြင်း
+# Port
 EXPOSE 8080
 
-# Application ကို Run ခြင်း
+# Run
 CMD ["python", "main.py"]
